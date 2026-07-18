@@ -51,3 +51,48 @@ def test_invert_operator_overload() -> None:
 def test_predicate_constraint_wraps_function() -> None:
     constraint = PredicateConstraint(lambda cs: len(cs) == 0)
     assert constraint.is_satisfied_by(EMPTY_SET)
+
+
+def test_default_scope_is_global() -> None:
+    assert AlwaysTrue().scope() is None
+
+
+def test_and_scope_merges_children_scopes() -> None:
+    class ScopedOnAlice(Constraint):
+        def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
+            return True
+
+        def scope(self):
+            return {"alice"}
+
+    class ScopedOnBob(Constraint):
+        def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
+            return True
+
+        def scope(self):
+            return {"bob"}
+
+    assert AndConstraint(ScopedOnAlice(), ScopedOnBob()).scope() == {"alice", "bob"}
+    assert OrConstraint(ScopedOnAlice(), ScopedOnBob()).scope() == {"alice", "bob"}
+
+
+def test_composite_scope_is_global_when_any_child_is() -> None:
+    class ScopedOnAlice(Constraint):
+        def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
+            return True
+
+        def scope(self):
+            return {"alice"}
+
+    assert AndConstraint(ScopedOnAlice(), AlwaysTrue()).scope() is None
+
+
+def test_not_scope_delegates_to_wrapped_constraint() -> None:
+    class ScopedOnAlice(Constraint):
+        def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
+            return True
+
+        def scope(self):
+            return {"alice"}
+
+    assert NotConstraint(ScopedOnAlice()).scope() == {"alice"}

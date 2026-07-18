@@ -24,3 +24,7 @@ def test_not_satisfied_when_tag_missing_but_expected() -> None:
 
 def test_not_satisfied_when_student_not_placed() -> None:
     assert not StudentTagPresence(dan, "latin", present=True).is_satisfied_by(make_classroom_set())
+
+
+def test_scope_is_the_single_student() -> None:
+    assert StudentTagPresence(alice, "latin").scope() == {alice}

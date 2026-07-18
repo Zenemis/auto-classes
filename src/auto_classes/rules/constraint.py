@@ -1,12 +1,29 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
-from auto_classes.core import ClassroomSet
+from auto_classes.core import ClassroomSet, Student
+
+
+def _merge_scopes(scopes: Iterable["set[Student] | None"]) -> "set[Student] | None":
+    merged: set[Student] = set()
+    for scope in scopes:
+        if scope is None:
+            return None
+        merged |= scope
+    return merged
 
 
 class Constraint(ABC):
     @abstractmethod
     def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool: ...
+
+    def scope(self) -> "set[Student] | None":
+        """Élèves dont dépend cette contrainte ; None si la portée est globale/indéterminée.
+
+        Sert de point d'extension pour un futur solveur CSP (vérification incrémentale
+        dès que les élèves de la portée sont affectés), sans impacter is_satisfied_by.
+        """
+        return None
 
     def __and__(self, other: "Constraint") -> "Constraint":
         return AndConstraint(self, other)
@@ -25,6 +42,9 @@ class AndConstraint(Constraint):
     def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
         return all(constraint.is_satisfied_by(classroom_set) for constraint in self.constraints)
 
+    def scope(self) -> "set[Student] | None":
+        return _merge_scopes(constraint.scope() for constraint in self.constraints)
+
 
 class OrConstraint(Constraint):
     def __init__(self, *constraints: Constraint):
@@ -33,6 +53,9 @@ class OrConstraint(Constraint):
     def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
         return any(constraint.is_satisfied_by(classroom_set) for constraint in self.constraints)
 
+    def scope(self) -> "set[Student] | None":
+        return _merge_scopes(constraint.scope() for constraint in self.constraints)
+
 
 class NotConstraint(Constraint):
     def __init__(self, constraint: Constraint):
@@ -40,6 +63,9 @@ class NotConstraint(Constraint):
 
     def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
         return not self.constraint.is_satisfied_by(classroom_set)
+
+    def scope(self) -> "set[Student] | None":
+        return self.constraint.scope()
 
 
 class PredicateConstraint(Constraint):

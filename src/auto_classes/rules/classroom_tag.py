@@ -15,3 +15,6 @@ class StudentTagPresence(Constraint):
         if classroom is None:
             return False
         return (self.tag in classroom.tags) == self.present
+
+    def scope(self) -> set[Student] | None:
+        return {self.student}

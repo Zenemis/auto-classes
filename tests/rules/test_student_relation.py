@@ -24,3 +24,11 @@ def test_students_apart_satisfied_when_different_classroom() -> None:
 
 def test_students_apart_not_satisfied_when_same_classroom() -> None:
     assert not StudentsApart(alice, bob).is_satisfied_by(make_classroom_set())
+
+
+def test_students_together_scope_is_both_students() -> None:
+    assert StudentsTogether(alice, bob).scope() == {alice, bob}
+
+
+def test_students_apart_scope_is_both_students() -> None:
+    assert StudentsApart(alice, bob).scope() == {alice, bob}

@@ -24,3 +24,7 @@ def test_not_satisfied_when_above_max_size() -> None:
 
 def test_satisfied_when_no_bounds_given() -> None:
     assert ClassSizeConstraint().is_satisfied_by(make_classroom_set())
+
+
+def test_scope_is_global() -> None:
+    assert ClassSizeConstraint(min_size=1).scope() is None
