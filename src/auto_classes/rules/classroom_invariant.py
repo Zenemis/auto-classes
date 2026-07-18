@@ -13,3 +13,8 @@ class ClassSizeConstraint(Constraint):
             and (self.max_size is None or len(classroom) <= self.max_size)
             for classroom in classroom_set
         )
+
+    def is_still_satisfiable(self, classroom_set: ClassroomSet) -> bool:
+        # max_size ne peut qu'être violé de façon définitive (les classes ne rétrécissent
+        # jamais pendant la recherche) ; min_size ne peut être vérifié qu'en fin d'affectation.
+        return self.max_size is None or all(len(classroom) <= self.max_size for classroom in classroom_set)

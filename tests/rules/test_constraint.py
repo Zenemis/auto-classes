@@ -96,3 +96,19 @@ def test_not_scope_delegates_to_wrapped_constraint() -> None:
             return {"alice"}
 
     assert NotConstraint(ScopedOnAlice()).scope() == {"alice"}
+
+
+def test_default_is_still_satisfiable_is_true() -> None:
+    assert AlwaysFalse().is_still_satisfiable(EMPTY_SET)
+
+
+def test_and_is_still_satisfiable_only_when_all_are() -> None:
+    class NeverSatisfiable(Constraint):
+        def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool:
+            return False
+
+        def is_still_satisfiable(self, classroom_set: ClassroomSet) -> bool:
+            return False
+
+    assert AndConstraint(AlwaysTrue(), AlwaysFalse()).is_still_satisfiable(EMPTY_SET)
+    assert not AndConstraint(AlwaysTrue(), NeverSatisfiable()).is_still_satisfiable(EMPTY_SET)

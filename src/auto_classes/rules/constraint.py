@@ -25,6 +25,15 @@ class Constraint(ABC):
         """
         return None
 
+    def is_still_satisfiable(self, classroom_set: ClassroomSet) -> bool:
+        """Condition nécessaire vérifiable sur un état partiel (élève encore non placés).
+
+        False signifie que cette branche ne pourra plus jamais satisfaire la contrainte,
+        peu importe la suite de la recherche : on peut l'élaguer immédiatement. True par
+        défaut (aucune information exploitable) : ne coupe jamais une branche valide.
+        """
+        return True
+
     def __and__(self, other: "Constraint") -> "Constraint":
         return AndConstraint(self, other)
 
@@ -44,6 +53,9 @@ class AndConstraint(Constraint):
 
     def scope(self) -> "set[Student] | None":
         return _merge_scopes(constraint.scope() for constraint in self.constraints)
+
+    def is_still_satisfiable(self, classroom_set: ClassroomSet) -> bool:
+        return all(constraint.is_still_satisfiable(classroom_set) for constraint in self.constraints)
 
 
 class OrConstraint(Constraint):
