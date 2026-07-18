@@ -1,0 +1,24 @@
+[project]
+name = "auto-classes"
+version = "0.1.0"
+description = "Automatisation de la création de classes d'élèves selon des règles configurables"
+requires-python = ">=3.11"
+dependencies = [
+    "customtkinter>=5.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "nuitka>=2.0",
+]
+
+[project.scripts]
+auto-classes = "auto_classes.cli.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
