@@ -68,7 +68,7 @@ def _read_classroom_sets(
         classroom_sets: list[ClassroomSet] = []
         for row in reader:
             indices = [int(value) for value in row]
-            if any(index >= num_classrooms for index in indices):
+            if max(indices, default=-1) >= num_classrooms:
                 return None
             classrooms = [Classroom(tags=set(tags)) for tags in classroom_tags]
             for student, classroom_index in zip(students, indices):
@@ -91,15 +91,26 @@ def cached_all_classroom_sets(students: list[Student], classroom_tags: list[set[
 
 
 def cached_valid_classroom_sets(
-    students: list[Student], classroom_tags: list[set[str]], constraint: Constraint
+    students: list[Student],
+    classroom_tags: list[set[str]],
+    constraint: Constraint,
+    all_classroom_sets: list[ClassroomSet] | None = None,
 ) -> dict[CanonicalClassroomSet, ClassroomSet]:
-    all_classroom_sets = cached_all_classroom_sets(students, classroom_tags)
+    """`all_classroom_sets`, si fourni, est utilisé tel quel en cas d'échec du cache du
+    sous-ensemble valide, au lieu de le recharger depuis le disque : utile pour un appelant
+    (ex. un fixture pytest scope="module") qui garde déjà l'univers complet en mémoire pour
+    toute la durée des tests plutôt que de le relire à chaque contrainte."""
+    # Le sous-ensemble valide est vérifié en premier : s'il est déjà en cache, on évite de
+    # charger (ou pire, régénérer) l'univers complet des ClassroomSet, potentiellement bien
+    # plus gros, qui n'est nécessaire qu'en cas d'échec de ce premier cache.
     path = CACHE_DIR / _classroom_shape_hash(students, classroom_tags) / f"{_constraint_hash(constraint)}.csv"
 
     cached = _read_classroom_sets(path, students, classroom_tags)
     if cached is not None:
         return {canonical_form(classroom_set): classroom_set for classroom_set in cached}
 
+    if all_classroom_sets is None:
+        all_classroom_sets = cached_all_classroom_sets(students, classroom_tags)
     valid = generate_valid_classroom_sets(all_classroom_sets, constraint)
     _write_classroom_sets(path, students, list(valid.values()))
     return valid

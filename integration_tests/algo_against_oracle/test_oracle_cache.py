@@ -147,3 +147,20 @@ def test_cached_valid_classroom_sets_second_call_reads_from_cache(isolated_cache
 
     assert nested_file.stat().st_mtime_ns == written_at
     assert first.keys() == second.keys()
+
+
+def test_cached_valid_classroom_sets_does_not_touch_the_all_classroom_sets_cache_on_hit(
+    isolated_cache_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Le sous-ensemble valide doit se suffire à lui-même une fois en cache : le retrouver ne
+    doit pas nécessiter de charger (ni a fortiori régénérer) l'univers complet des
+    ClassroomSet, potentiellement bien plus coûteux."""
+    constraint = StudentsTogether(alice, bob)
+    oracle_cache.cached_valid_classroom_sets(STUDENTS, CLASSROOM_TAGS, constraint)
+
+    def fail_if_called(*args: object, **kwargs: object) -> None:
+        raise AssertionError("cached_all_classroom_sets ne doit pas être appelé quand le cache valide est déjà présent")
+
+    monkeypatch.setattr(oracle_cache, "cached_all_classroom_sets", fail_if_called)
+
+    oracle_cache.cached_valid_classroom_sets(STUDENTS, CLASSROOM_TAGS, constraint)

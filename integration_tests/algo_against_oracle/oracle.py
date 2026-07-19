@@ -31,6 +31,17 @@ def generate_all_classroom_sets(students: list[Student], classroom_tags: list[se
     return all_classroom_sets
 
 
+def format_classroom_set(classroom_set: ClassroomSet) -> str:
+    """Représentation lisible d'un ClassroomSet, pour inspection humaine (ex. dump de faux
+    positifs/négatifs à la suite d'un échec de test)."""
+    lines = []
+    for index, classroom in enumerate(classroom_set):
+        tags = ", ".join(sorted(classroom.tags)) or "-"
+        names = ", ".join(sorted(student.name for student in classroom.students)) or "(vide)"
+        lines.append(f"Classe {index} [tags: {tags}] : {names}")
+    return "\n".join(lines)
+
+
 def generate_valid_classroom_sets(
     all_classroom_sets: list[ClassroomSet], constraint: Constraint
 ) -> dict[CanonicalClassroomSet, ClassroomSet]:

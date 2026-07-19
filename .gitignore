@@ -1,11 +1,17 @@
+# Python
 __pycache__/
 *.pyc
 .venv/
 venv/
 dist/
+*.egg-info/
+.pytest_cache/
+
+# Build artifacts
 build/*.build/
 build/*.dist/
 build/*.onefile-build/
-*.egg-info/
-.pytest_cache/
+
+# Integration tests artifacts
 integration_tests/algo_against_oracle/oracle_cache/
+integration_tests/algo_against_oracle/oracle_results/
