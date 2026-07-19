@@ -8,3 +8,4 @@ build/*.dist/
 build/*.onefile-build/
 *.egg-info/
 .pytest_cache/
+integration_tests/algo_against_oracle/oracle_cache/
