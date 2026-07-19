@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
+from typing import Any, ClassVar
 
 from auto_classes.core import ClassroomSet, Student
 
@@ -14,6 +15,14 @@ def _merge_scopes(scopes: Iterable["set[Student] | None"]) -> "set[Student] | No
 
 
 class Constraint(ABC):
+    type_name: ClassVar[str]
+    _registry: ClassVar[dict[str, type["Constraint"]]] = {}
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "type_name" in cls.__dict__:
+            Constraint._registry[cls.type_name] = cls
+
     @abstractmethod
     def is_satisfied_by(self, classroom_set: ClassroomSet) -> bool: ...
 
@@ -34,6 +43,23 @@ class Constraint(ABC):
         """
         return True
 
+    def to_dict(self) -> dict[str, Any]:
+        """Sérialise cette contrainte. Pas abstraite : les contraintes custom (ex.
+        PredicateConstraint, qui enveloppe une fonction Python arbitraire) n'ont en général
+        rien de sérialisable et peuvent laisser ce comportement par défaut."""
+        raise TypeError(f"{type(self).__name__} n'est pas sérialisable")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Constraint":
+        constraint_cls = Constraint._registry.get(data["type"])
+        if constraint_cls is None:
+            raise ValueError(f"Type de contrainte inconnu : {data['type']!r}")
+        return constraint_cls._from_dict(data)
+
+    @classmethod
+    def _from_dict(cls, data: dict[str, Any]) -> "Constraint":
+        raise NotImplementedError
+
     def __and__(self, other: "Constraint") -> "Constraint":
         return AndConstraint(self, other)
 
@@ -45,6 +71,8 @@ class Constraint(ABC):
 
 
 class AndConstraint(Constraint):
+    type_name = "and"
+
     def __init__(self, *constraints: Constraint):
         self.constraints = constraints
 
@@ -57,8 +85,17 @@ class AndConstraint(Constraint):
     def is_still_satisfiable(self, classroom_set: ClassroomSet) -> bool:
         return all(constraint.is_still_satisfiable(classroom_set) for constraint in self.constraints)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {"type": self.type_name, "constraints": [c.to_dict() for c in self.constraints]}
+
+    @classmethod
+    def _from_dict(cls, data: dict[str, Any]) -> "AndConstraint":
+        return cls(*(Constraint.from_dict(sub) for sub in data["constraints"]))
+
 
 class OrConstraint(Constraint):
+    type_name = "or"
+
     def __init__(self, *constraints: Constraint):
         self.constraints = constraints
 
@@ -68,8 +105,17 @@ class OrConstraint(Constraint):
     def scope(self) -> "set[Student] | None":
         return _merge_scopes(constraint.scope() for constraint in self.constraints)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {"type": self.type_name, "constraints": [c.to_dict() for c in self.constraints]}
+
+    @classmethod
+    def _from_dict(cls, data: dict[str, Any]) -> "OrConstraint":
+        return cls(*(Constraint.from_dict(sub) for sub in data["constraints"]))
+
 
 class NotConstraint(Constraint):
+    type_name = "not"
+
     def __init__(self, constraint: Constraint):
         self.constraint = constraint
 
@@ -78,6 +124,13 @@ class NotConstraint(Constraint):
 
     def scope(self) -> "set[Student] | None":
         return self.constraint.scope()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"type": self.type_name, "constraint": self.constraint.to_dict()}
+
+    @classmethod
+    def _from_dict(cls, data: dict[str, Any]) -> "NotConstraint":
+        return cls(Constraint.from_dict(data["constraint"]))
 
 
 class PredicateConstraint(Constraint):
