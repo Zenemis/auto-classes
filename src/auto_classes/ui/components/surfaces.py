@@ -118,6 +118,7 @@ class ClickableCard(ctk.CTkFrame):
         self._hovered = False
         self._selected = False
         self._accent: Color | None = None
+        self._accent_filled = False
 
     def activate(self, target: tk.Misc | None = None) -> None:
         """Propage les bindings sur `target` (la carte entière par défaut).
@@ -138,10 +139,16 @@ class ClickableCard(ctk.CTkFrame):
             self._selected = selected
             self._apply_style()
 
-    def set_accent(self, accent: Color | None) -> None:
-        """Bordure colorée signalant que la carte est une cible d'action (outil armé)."""
-        if accent != self._accent:
+    def set_accent(self, accent: Color | None, *, filled: bool = False) -> None:
+        """Signale que la carte est une cible d'action (outil armé).
+
+        `filled` distingue les cibles qui portent déjà la contrainte : un clic les
+        libérerait au lieu de les contraindre, il faut donc les voir au premier coup
+        d'œil.
+        """
+        if (accent, filled) != (self._accent, self._accent_filled):
             self._accent = accent
+            self._accent_filled = filled
             self._apply_style()
 
     @property
@@ -182,7 +189,10 @@ class ClickableCard(ctk.CTkFrame):
         else:
             border = self._border_color
 
-        self.configure(fg_color=fill, border_color=border)
+        # Cible déjà contrainte : bordure appuyée plutôt que fond coloré, qui rendrait
+        # illisibles les pastilles de couleur et le nom.
+        width = 2 if self._accent is not None and self._accent_filled else 1
+        self.configure(fg_color=fill, border_color=border, border_width=width)
 
 
 class EmptyState(Group):

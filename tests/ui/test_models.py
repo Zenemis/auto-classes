@@ -7,6 +7,7 @@ from auto_classes.ui.models import (
     StudentModel,
     StudentRelation,
     TagRuleKind,
+    elide_de,
 )
 
 
@@ -60,6 +61,30 @@ def test_relation_is_undirected():
 def test_relation_kind_describes_in_french():
     assert RelationKind.TOGETHER.describe("Bob") == "Avec Bob"
     assert RelationKind.APART.describe("Bob") == "Séparé de Bob"
+
+
+def test_relation_kind_elides_before_a_vowel():
+    assert RelationKind.APART.describe("Alice") == "Séparé d'Alice"
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("Bob", "de Bob"),
+        ("Carole", "de Carole"),
+        ("Alice", "d'Alice"),
+        ("Inès", "d'Inès"),
+        ("Elsa", "d'Elsa"),
+        ("Oscar", "d'Oscar"),
+        ("Ugo", "d'Ugo"),
+        ("Émile", "d'Émile"),
+        ("Hugo", "d'Hugo"),  # le h est traité comme une voyelle
+        ("Yasmine", "de Yasmine"),  # le y consonne ne s'élide pas
+        ("", "de "),
+    ],
+)
+def test_elide_de(name, expected):
+    assert elide_de(name) == expected
 
 
 def test_tag_rule_kind_describes_in_french():

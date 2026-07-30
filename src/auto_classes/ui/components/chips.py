@@ -22,7 +22,11 @@ TAG_RULE_COLORS: dict[TagRuleKind, Color] = {
 
 
 class TagPill(ctk.CTkFrame):
-    """Tag de classe. Cliquable (choix d'un tag) et/ou supprimable (édition d'une classe)."""
+    """Tag de classe. Cliquable (choix d'un tag) et/ou supprimable (édition d'une classe).
+
+    `outlined` sert aux tags proposés mais pas encore posés : pleine, la pastille dit
+    « contrainte active, un clic la retire » ; en contour, « un clic la pose ».
+    """
 
     def __init__(
         self,
@@ -33,8 +37,18 @@ class TagPill(ctk.CTkFrame):
         on_remove: Callable[[str], None] | None = None,
         color: Color = Palette.SURFACE_ALT,
         text_color: Color = Palette.TEXT_MUTED,
+        outlined: bool = False,
     ) -> None:
-        super().__init__(master, fg_color=color, corner_radius=Metrics.RADIUS_PILL, height=22)
+        super().__init__(
+            master,
+            fg_color="transparent" if outlined else color,
+            border_width=1 if outlined else 0,
+            border_color=color,
+            corner_radius=Metrics.RADIUS_PILL,
+            height=22,
+        )
+        if outlined:
+            text_color = color
 
         self.tag = tag
         ctk.CTkLabel(self, text=tag, font=Fonts.small(), text_color=text_color).pack(

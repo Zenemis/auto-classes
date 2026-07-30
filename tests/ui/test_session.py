@@ -182,6 +182,100 @@ def test_add_relation_rejects_a_student_with_itself(session):
         session.add_relation(RelationKind.APART, alice.id, alice.id)
 
 
+def test_relation_between_ignores_the_order(session):
+    alice = session.add_student("Alice")
+    bob = session.add_student("Bob")
+    relation = session.add_relation(RelationKind.APART, alice.id, bob.id)
+
+    assert session.relation_between(alice.id, bob.id) is relation
+    assert session.relation_between(bob.id, alice.id) is relation
+
+
+def test_relation_between_is_none_without_constraint(session):
+    alice = session.add_student("Alice")
+    bob = session.add_student("Bob")
+    assert session.relation_between(alice.id, bob.id) is None
+
+
+def test_toggle_relation_adds_then_removes(session):
+    alice = session.add_student("Alice")
+    bob = session.add_student("Bob")
+
+    added = session.toggle_relation(RelationKind.APART, alice.id, bob.id)
+    assert added is not None
+    assert session.relations == [added]
+
+    assert session.toggle_relation(RelationKind.APART, alice.id, bob.id) is None
+    assert session.relations == []
+
+
+def test_toggle_relation_removes_whatever_the_click_order(session):
+    alice = session.add_student("Alice")
+    bob = session.add_student("Bob")
+    session.toggle_relation(RelationKind.TOGETHER, alice.id, bob.id)
+
+    assert session.toggle_relation(RelationKind.TOGETHER, bob.id, alice.id) is None
+    assert session.relations == []
+
+
+def test_toggle_relation_with_the_other_kind_replaces_instead_of_removing(session):
+    alice = session.add_student("Alice")
+    bob = session.add_student("Bob")
+    session.toggle_relation(RelationKind.APART, alice.id, bob.id)
+
+    replaced = session.toggle_relation(RelationKind.TOGETHER, alice.id, bob.id)
+
+    assert replaced is not None and replaced.kind is RelationKind.TOGETHER
+    assert len(session.relations) == 1
+
+
+def test_toggle_relation_emits_on_both_directions(session):
+    alice = session.add_student("Alice")
+    bob = session.add_student("Bob")
+    seen: list[str] = []
+    session.constraints_changed.connect(lambda: seen.append("changed"))
+
+    session.toggle_relation(RelationKind.APART, alice.id, bob.id)
+    session.toggle_relation(RelationKind.APART, alice.id, bob.id)
+
+    assert len(seen) == 2
+
+
+def test_tag_rule_for_finds_the_rule(session):
+    classroom = session.add_classroom("6e A")
+    session.update_classroom(classroom.id, tags={"latin"})
+    alice = session.add_student("Alice")
+    rule = session.add_tag_rule(TagRuleKind.INCLUDE, alice.id, "latin")
+
+    assert session.tag_rule_for(alice.id, "latin") is rule
+    assert session.tag_rule_for(alice.id, "bilangue") is None
+
+
+def test_toggle_tag_rule_adds_then_removes(session):
+    classroom = session.add_classroom("6e A")
+    session.update_classroom(classroom.id, tags={"latin"})
+    alice = session.add_student("Alice")
+
+    added = session.toggle_tag_rule(TagRuleKind.INCLUDE, alice.id, "latin")
+    assert added is not None
+    assert session.tag_rules == [added]
+
+    assert session.toggle_tag_rule(TagRuleKind.INCLUDE, alice.id, "latin") is None
+    assert session.tag_rules == []
+
+
+def test_toggle_tag_rule_with_the_other_kind_replaces_instead_of_removing(session):
+    classroom = session.add_classroom("6e A")
+    session.update_classroom(classroom.id, tags={"latin"})
+    alice = session.add_student("Alice")
+    session.toggle_tag_rule(TagRuleKind.INCLUDE, alice.id, "latin")
+
+    replaced = session.toggle_tag_rule(TagRuleKind.EXCLUDE, alice.id, "latin")
+
+    assert replaced is not None and replaced.kind is TagRuleKind.EXCLUDE
+    assert len(session.tag_rules) == 1
+
+
 def test_add_tag_rule_replaces_the_opposite_kind(session):
     classroom = session.add_classroom("6e A")
     session.update_classroom(classroom.id, tags={"latin"})

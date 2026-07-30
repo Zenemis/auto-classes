@@ -93,6 +93,22 @@ class SessionState:
     def tag_rules_of(self, student_id: str) -> list[TagRule]:
         return [rule for rule in self._tag_rules if rule.student_id == student_id]
 
+    def relation_between(self, first_id: str, second_id: str) -> StudentRelation | None:
+        """La contrainte liant ces deux élèves, quel que soit son sens. Une seule par paire."""
+        pair = frozenset({first_id, second_id})
+        return next((relation for relation in self._relations if relation.pair == pair), None)
+
+    def tag_rule_for(self, student_id: str, tag: str) -> TagRule | None:
+        """La contrainte liant cet élève à ce tag. Une seule par couple."""
+        return next(
+            (
+                rule
+                for rule in self._tag_rules
+                if rule.student_id == student_id and rule.tag == tag.strip()
+            ),
+            None,
+        )
+
     def constraint_count_of(self, student_id: str) -> int:
         return len(self.relations_of(student_id)) + len(self.tag_rules_of(student_id))
 
@@ -206,6 +222,21 @@ class SessionState:
 
     # -------------------------------------------------------------- contraintes
 
+    def toggle_relation(
+        self, kind: RelationKind, first_id: str, second_id: str
+    ) -> StudentRelation | None:
+        """Pose la contrainte, ou la retire si elle est déjà posée à l'identique.
+
+        Un clic pose, un second clic défait : c'est la même geste qui sert dans les deux
+        sens. Une contrainte de l'autre type sur la même paire est remplacée, pas
+        retirée — deux élèves ne peuvent pas être à la fois ensemble et séparés.
+        """
+        existing = self.relation_between(first_id, second_id)
+        if existing is not None and existing.kind is kind:
+            self.remove_relation(existing.id)
+            return None
+        return self.add_relation(kind, first_id, second_id)
+
     def add_relation(self, kind: RelationKind, first_id: str, second_id: str) -> StudentRelation:
         """Crée (ou remplace) la contrainte liant deux élèves : une seule par paire."""
         first = self._require_student(first_id)
@@ -213,8 +244,7 @@ class SessionState:
         if first.id == second.id:
             raise SessionError("Un élève ne peut pas être mis en relation avec lui-même.")
 
-        pair = frozenset({first.id, second.id})
-        existing = next((relation for relation in self._relations if relation.pair == pair), None)
+        existing = self.relation_between(first.id, second.id)
         if existing is not None:
             if existing.kind is kind:
                 return existing
@@ -229,6 +259,14 @@ class SessionState:
         self._relations = [relation for relation in self._relations if relation.id != relation_id]
         self.constraints_changed.emit()
 
+    def toggle_tag_rule(self, kind: TagRuleKind, student_id: str, tag: str) -> TagRule | None:
+        """Pose la contrainte élève–tag, ou la retire si elle est déjà posée à l'identique."""
+        existing = self.tag_rule_for(student_id, tag)
+        if existing is not None and existing.kind is kind:
+            self.remove_tag_rule(existing.id)
+            return None
+        return self.add_tag_rule(kind, student_id, tag)
+
     def add_tag_rule(self, kind: TagRuleKind, student_id: str, tag: str) -> TagRule:
         """Crée (ou remplace) la contrainte liant un élève à un tag : une seule par couple."""
         student = self._require_student(student_id)
@@ -236,14 +274,7 @@ class SessionState:
         if not clean_tag:
             raise SessionError("Le tag ne peut pas être vide.")
 
-        existing = next(
-            (
-                rule
-                for rule in self._tag_rules
-                if rule.student_id == student.id and rule.tag == clean_tag
-            ),
-            None,
-        )
+        existing = self.tag_rule_for(student.id, clean_tag)
         if existing is not None:
             if existing.kind is kind:
                 return existing

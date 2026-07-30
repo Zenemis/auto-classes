@@ -7,7 +7,7 @@ cet objet — l'un arme un outil, l'autre réagit aux clics.
 
 from enum import Enum
 
-from auto_classes.ui.models import RelationKind, TagRuleKind
+from auto_classes.ui.models import RelationKind, TagRuleKind, elide_de
 from auto_classes.ui.signal import Signal
 
 
@@ -21,23 +21,39 @@ class Tool(Enum):
 
     @property
     def label(self) -> str:
+        """Amorce du libellé, à compléter par la cible (« Mettre avec » + « Alice »)."""
         return {
             Tool.APART: "Séparer de",
             Tool.TOGETHER: "Mettre avec",
-            Tool.EXCLUDE: "Exclu de",
-            Tool.INCLUDE: "Inclus dans",
+            Tool.EXCLUDE: "Exclure de",
+            Tool.INCLUDE: "Inclure dans",
         }[self]
 
     @property
     def targets_students(self) -> bool:
-        """Vrai si l'outil se complète en cliquant un autre élève, faux s'il visait un tag."""
+        """Vrai si l'outil se complète en cliquant un autre élève, faux s'il visait une option."""
         return self in (Tool.APART, Tool.TOGETHER)
+
+    def label_for(self, student_name: str) -> str:
+        """Libellé complet du bouton d'outil.
+
+        Les outils entre élèves nomment l'élève courant (« Mettre avec Alice ») ; ceux
+        qui visent une option ne peuvent nommer que le type de cible, l'option n'étant
+        choisie qu'après l'armement.
+        """
+        if self is Tool.TOGETHER:
+            return f"Mettre avec {student_name}"
+        if self is Tool.APART:
+            return f"Séparer {elide_de(student_name)}"
+        if self is Tool.INCLUDE:
+            return "Inclure dans une option"
+        return "Exclure d'une option"
 
     @property
     def hint(self) -> str:
         if self.targets_students:
-            return "Cliquez un autre élève dans la liste pour créer la contrainte."
-        return "Choisissez un tag de classe ci-dessous."
+            return "Cliquez un élève pour poser la contrainte, cliquez-le à nouveau pour la retirer."
+        return "Cliquez une option pour poser la contrainte, cliquez-la à nouveau pour la retirer."
 
     @property
     def relation_kind(self) -> RelationKind:

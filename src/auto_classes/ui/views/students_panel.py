@@ -13,6 +13,7 @@ from auto_classes.ui.components import (
     FlowGrid,
     IconButton,
     InlineComposer,
+    NoticeDialog,
     Panel,
     SectionHeader,
 )
@@ -159,14 +160,23 @@ class StudentsPanel(Panel):
         return self._filter in name.casefold()
 
     def _apply_visual_state(self) -> None:
-        """Sélection et, si un outil d'élève est armé, mise en évidence des cibles."""
+        """Sélection et, si un outil d'élève est armé, mise en évidence des cibles.
+
+        Les élèves qui portent déjà la contrainte de l'outil armé sont marqués : un clic
+        les libérerait, il faut le voir avant de cliquer.
+        """
         selected = self._interaction.selected_student_id
         tool = self._interaction.active_tool
-        accent = TOOL_ACCENTS[tool] if tool is not None and tool.targets_students else None
+        armed = tool is not None and tool.targets_students and selected is not None
+        accent = TOOL_ACCENTS[tool] if armed else None
 
         for student_id, tile in self._tiles.items():
             tile.set_selected(student_id == selected)
-            tile.set_accent(None if student_id == selected else accent)
+            if not armed or student_id == selected:
+                tile.set_accent(None)
+                continue
+            relation = self._session.relation_between(selected, student_id)
+            tile.set_accent(accent, filled=relation is not None and relation.kind is tool.relation_kind)
 
     # ---------------------------------------------------------------- réactions
 
@@ -175,8 +185,9 @@ class StudentsPanel(Panel):
         selected = self._interaction.selected_student_id
 
         if tool is not None and tool.targets_students and selected is not None and selected != student_id:
+            # Un clic pose la contrainte, un second la retire.
             try:
-                self._session.add_relation(tool.relation_kind, selected, student_id)
+                self._session.toggle_relation(tool.relation_kind, selected, student_id)
             except SessionError as error:
                 NoticeDialog.inform(self, "Contrainte impossible", str(error))
             return  # l'outil reste armé : plusieurs contraintes s'enchaînent

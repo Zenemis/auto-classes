@@ -1,6 +1,6 @@
 """Aides de binding Tk pour rendre un bloc composite cliquable d'un seul tenant."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 import customtkinter as ctk
 import tkinter as tk
@@ -8,22 +8,45 @@ import tkinter as tk
 INTERACTIVE_WIDGETS = (ctk.CTkButton, ctk.CTkEntry, ctk.CTkTextbox, ctk.CTkScrollbar)
 """Widgets qui gèrent déjà leurs propres clics : leur sous-arbre n'est jamais rebindé."""
 
+CONTAINERS = (ctk.CTkFrame, ctk.CTkScrollableFrame)
+"""Widgets CTk dans lesquels il faut descendre pour atteindre les enfants réels."""
 
-def bind_recursive(widget: tk.Misc, sequence: str, callback: Callable[[tk.Event], None]) -> None:
-    """Binde `sequence` sur `widget` et toute sa descendance.
 
-    Une carte CustomTkinter est un empilement frame + canvas + labels : sans cette
-    propagation, un clic sur le texte d'une carte ne déclenche rien.
+def _forwards_to_internals(widget: tk.Misc) -> bool:
+    """Vrai si `bind` sur ce widget atteint déjà toutes ses parties internes.
+
+    Un `CTkLabel` est un empilement canvas + label Tk, et son `bind` relaie sur les
+    deux. Mais contrairement à `CTkFrame`, il expose aussi ces parties dans
+    `winfo_children()` : y redescendre poserait un second gestionnaire sur chacune, et
+    le moindre clic déclencherait deux fois. Invisible tant qu'une action est
+    idempotente, fatal dès qu'elle bascule — poser puis retirer aussitôt.
     """
-    widget.bind(sequence, callback, add="+")
+    return isinstance(widget, ctk.CTkBaseClass) and not isinstance(widget, CONTAINERS)
+
+
+def _subtree(widget: tk.Misc) -> Iterator[tk.Misc]:
+    """Widget et descendance à traiter, en s'arrêtant aux widgets auto-suffisants."""
+    yield widget
+    if _forwards_to_internals(widget):
+        return
     for child in widget.winfo_children():
         if isinstance(child, INTERACTIVE_WIDGETS):
             continue
-        bind_recursive(child, sequence, callback)
+        yield from _subtree(child)
+
+
+def bind_recursive(widget: tk.Misc, sequence: str, callback: Callable[[tk.Event], None]) -> None:
+    """Binde `sequence` sur `widget` et sur ce qu'il faut de sa descendance.
+
+    Une carte CustomTkinter est un empilement frame + canvas + libellés : sans cette
+    propagation, un clic sur le texte d'une carte ne déclencherait rien.
+    """
+    for target in _subtree(widget):
+        target.bind(sequence, callback, add="+")
 
 
 def set_cursor_recursive(widget: tk.Misc, cursor: str) -> None:
-    for target in (widget, *_descendants(widget)):
+    for target in _subtree(widget):
         try:
             target.configure(cursor=cursor)
         except tk.TclError:
@@ -39,13 +62,3 @@ def contains_widget(container: tk.Misc, widget: tk.Misc | None) -> bool:
     if widget is None:
         return False
     return str(widget) == str(container) or str(widget).startswith(f"{container}.")
-
-
-def _descendants(widget: tk.Misc) -> list[tk.Misc]:
-    found: list[tk.Misc] = []
-    for child in widget.winfo_children():
-        if isinstance(child, INTERACTIVE_WIDGETS):
-            continue
-        found.append(child)
-        found += _descendants(child)
-    return found

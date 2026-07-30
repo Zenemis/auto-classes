@@ -21,6 +21,7 @@ from auto_classes.ui.components import (
     TextPromptDialog,
     ToolButton,
 )
+from auto_classes.ui.components.labels import ellipsize
 from auto_classes.ui.interaction import InteractionState, Tool
 from auto_classes.ui.session import SessionError, SessionState
 from auto_classes.ui.theme import Color, Fonts, Icons, Metrics, Palette
@@ -32,7 +33,12 @@ TOOL_ACCENTS: dict[Tool, Color] = {
     Tool.INCLUDE: Palette.INCLUDE,
 }
 
-TOOL_LAYOUT = ((Tool.APART, Tool.TOGETHER), (Tool.EXCLUDE, Tool.INCLUDE))
+# Empilés plutôt qu'en damier : les libellés nomment désormais leur cible
+# (« Mettre avec Marie-Charlotte »), ce qui ne tient pas sur une demi-largeur.
+TOOL_ORDER = (Tool.TOGETHER, Tool.APART, Tool.INCLUDE, Tool.EXCLUDE)
+
+# Largeur utile d'un bouton d'outil, pour tronquer le nom qu'il affiche.
+TOOL_LABEL_WIDTH = Metrics.INSPECTOR_WIDTH - 2 * Metrics.PAD_MD - 2 * Metrics.PAD_SM
 
 
 class StudentInspector(Panel):
@@ -88,23 +94,17 @@ class StudentInspector(Panel):
         self._tools: dict[Tool, ToolButton] = {}
         tools = Group(self._body)
         tools.pack(fill="x")
-        tools.grid_columnconfigure((0, 1), weight=1, uniform="tool")
-        for row_index, row_tools in enumerate(TOOL_LAYOUT):
-            for column, tool in enumerate(row_tools):
-                button = ToolButton(
-                    tools,
-                    tool.label,
-                    TOOL_ACCENTS[tool],
-                    lambda tool=tool: self._interaction.toggle_tool(tool),
-                )
-                button.grid(
-                    row=row_index,
-                    column=column,
-                    sticky="ew",
-                    padx=(0, Metrics.PAD_XS if column == 0 else 0),
-                    pady=(0, Metrics.PAD_XS),
-                )
-                self._tools[tool] = button
+        tools.grid_columnconfigure(0, weight=1)
+        for row_index, tool in enumerate(TOOL_ORDER):
+            button = ToolButton(
+                tools,
+                tool.label_for(""),
+                TOOL_ACCENTS[tool],
+                lambda tool=tool: self._interaction.toggle_tool(tool),
+                anchor="w",
+            )
+            button.grid(row=row_index, column=0, sticky="ew", pady=(0, Metrics.PAD_XS))
+            self._tools[tool] = button
 
         self._hint = ctk.CTkLabel(
             self._body,
@@ -148,11 +148,21 @@ class StudentInspector(Panel):
 
         active = self._interaction.active_tool
         for tool, button in self._tools.items():
+            button.configure(text=self._tool_label(tool, student.name))
             button.set_active(tool is active)
 
         self._refresh_hint(active)
         self._refresh_tag_chooser(active)
         self._refresh_constraints(student.id)
+
+    def _tool_label(self, tool: Tool, student_name: str) -> str:
+        """Libellé du bouton, avec le nom de l'élève tronqué s'il ne tient pas."""
+        if not tool.targets_students:
+            return tool.label_for("")
+
+        font = Fonts.small_bold()
+        available = TOOL_LABEL_WIDTH - font.measure(tool.label_for(""))
+        return tool.label_for(ellipsize(student_name, available, font.measure))
 
     def _refresh_hint(self, active: Tool | None) -> None:
         if active is None:
@@ -160,7 +170,7 @@ class StudentInspector(Panel):
                 text="Choisissez un outil, puis désignez l'élève ou le tag concerné."
             )
         else:
-            self._hint.configure(text=f"{active.label} — {active.hint}")
+            self._hint.configure(text=active.hint)
 
     def _refresh_tag_chooser(self, active: Tool | None) -> None:
         for child in self._tag_chooser.winfo_children():
@@ -170,6 +180,7 @@ class StudentInspector(Panel):
             self._tag_chooser.pack_forget()
             return
 
+        student_id = self._interaction.selected_student_id
         tags = self._session.available_tags()
         if not tags:
             ctk.CTkLabel(
@@ -184,12 +195,15 @@ class StudentInspector(Panel):
         else:
             accent = TOOL_ACCENTS[active]
             for tag in tags:
+                rule = self._session.tag_rule_for(student_id, tag) if student_id else None
+                applied = rule is not None and rule.kind is active.tag_rule_kind
                 TagPill(
                     self._tag_chooser,
                     tag,
-                    on_click=lambda chosen, tool=active: self._apply_tag(tool, chosen),
+                    on_click=lambda chosen, tool=active: self._toggle_tag(tool, chosen),
                     color=accent,
                     text_color=Palette.TEXT_ON_ACCENT,
+                    outlined=not applied,
                 ).pack(anchor="w", pady=1)
 
         self._tag_chooser.pack(
@@ -235,12 +249,13 @@ class StudentInspector(Panel):
         student_id = self._interaction.selected_student_id
         return None if student_id is None else self._session.student(student_id)
 
-    def _apply_tag(self, tool: Tool, tag: str) -> None:
+    def _toggle_tag(self, tool: Tool, tag: str) -> None:
+        """Un clic pose la contrainte sur cette option, un second la retire."""
         student = self._current_student()
         if student is None:
             return
         try:
-            self._session.add_tag_rule(tool.tag_rule_kind, student.id, tag)
+            self._session.toggle_tag_rule(tool.tag_rule_kind, student.id, tag)
         except SessionError as error:
             NoticeDialog.inform(self, "Contrainte impossible", str(error))
 

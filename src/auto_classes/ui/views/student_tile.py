@@ -64,6 +64,14 @@ class StudentTile(ClickableCard):
         self.activate()
         self.refresh()
 
+    def set_accent(self, accent: Color | None, *, filled: bool = False) -> None:
+        super().set_accent(accent, filled=filled)
+        # Le nom reprend la couleur de l'outil quand la contrainte est déjà posée :
+        # la bordure seule se remarque mal sur une tuile de cette taille.
+        self._name.configure(
+            text_color=accent if accent is not None and filled else Palette.TEXT
+        )
+
     def refresh(self) -> None:
         student = self._session.student(self.student_id)
         if student is None:
@@ -76,7 +84,12 @@ class StudentTile(ClickableCard):
         for count, accent in self._badge_counts():
             CountBadge(self._badges, count, accent).pack(side="left", padx=(0, Metrics.PAD_XS))
 
-        self.activate(self._badges)
+        # Ne binder que les pastilles fraîchement créées. Repasser sur `_badges`
+        # lui-même empilerait un gestionnaire de plus à chaque rafraîchissement
+        # (`add="+"`), et un clic sur cette zone basculerait la contrainte autant de
+        # fois qu'il y a de gestionnaires : posée, retirée, posée…
+        for badge in self._badges.winfo_children():
+            self.activate(badge)
 
     def _badge_counts(self) -> list[tuple[int, Color]]:
         """Une pastille par type de contrainte présent, dans un ordre stable."""

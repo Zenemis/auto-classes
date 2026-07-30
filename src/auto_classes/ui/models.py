@@ -15,9 +15,24 @@ from auto_classes.core import Classroom, Student
 
 _ID_SEQUENCE = count(1)
 
+_VOWELS = "aàâäeéèêëiîïoôöuùûüh"
+
 
 def _new_id(prefix: str) -> str:
     return f"{prefix}-{next(_ID_SEQUENCE)}"
+
+
+def elide_de(word: str) -> str:
+    """« de Bob », mais « d'Alice » : la préposition s'élide devant une voyelle.
+
+    Le h compte comme une voyelle : sur des prénoms, « d'Hugo » est la forme attendue,
+    et distinguer h muet et h aspiré demanderait un dictionnaire. Le y, lui, n'élide
+    pas : dans une liste de classe il se prononce presque toujours comme une consonne
+    (Yasmine, Yanis), et « d'Yves » reste l'exception.
+    """
+    if word and word[0].lower() in _VOWELS:
+        return f"d'{word}"
+    return f"de {word}"
 
 
 @dataclass
@@ -74,7 +89,7 @@ class RelationKind(Enum):
     def describe(self, other_name: str) -> str:
         if self is RelationKind.TOGETHER:
             return f"Avec {other_name}"
-        return f"Séparé de {other_name}"
+        return f"Séparé {elide_de(other_name)}"
 
 
 class TagRuleKind(Enum):
@@ -85,7 +100,7 @@ class TagRuleKind(Enum):
 
     @property
     def label(self) -> str:
-        return "Inclus dans" if self is TagRuleKind.INCLUDE else "Exclu de"
+        return "Inclure dans" if self is TagRuleKind.INCLUDE else "Exclure de"
 
     def describe(self, tag: str) -> str:
         if self is TagRuleKind.INCLUDE:
