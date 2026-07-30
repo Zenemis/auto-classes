@@ -5,11 +5,14 @@ from collections.abc import Callable
 import customtkinter as ctk
 import tkinter as tk
 
+from auto_classes.ui import assets
 from auto_classes.ui.components import GhostButton, Panel, PrimaryButton
 from auto_classes.ui.session import SessionState
 from auto_classes.ui.theme import Fonts, Icons, Metrics, Palette
 
 SOLUTION_CHOICES = ("1", "3", "5", "10", "20")
+
+ICON_SIZE = 18
 
 
 class MenuBar(Panel):
@@ -30,12 +33,27 @@ class MenuBar(Panel):
         self.grid_propagate(False)
         self.grid_columnconfigure(2, weight=1)
 
-        GhostButton(self, "Importer", on_import, icon=Icons.IMPORT, width=118).grid(
-            row=0, column=0, padx=(Metrics.PAD_MD, Metrics.PAD_SM), pady=Metrics.PAD_LG
-        )
-        GhostButton(self, "Pronote", on_pronote, icon=Icons.PRONOTE, width=112).grid(
-            row=0, column=1, pady=Metrics.PAD_LG
-        )
+        # Le pictogramme d'import est reteint avec la couleur du texte (il est livré en
+        # quasi noir) ; le logo Pronote garde ses propres couleurs de marque.
+        GhostButton(
+            self,
+            "Importer",
+            on_import,
+            width=124,
+            image=assets.icon(assets.IMPORT_ICON, size=ICON_SIZE, tint=Palette.TEXT),
+            compound="left",
+            anchor="center",
+        ).grid(row=0, column=0, padx=(Metrics.PAD_MD, Metrics.PAD_SM), pady=Metrics.PAD_LG)
+
+        GhostButton(
+            self,
+            "Pronote",
+            on_pronote,
+            width=118,
+            image=assets.icon(assets.PRONOTE_ICON, size=ICON_SIZE),
+            compound="left",
+            anchor="center",
+        ).grid(row=0, column=1, pady=Metrics.PAD_LG)
 
         ctk.CTkLabel(
             self, text="Propositions", font=Fonts.small(), text_color=Palette.TEXT_MUTED

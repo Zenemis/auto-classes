@@ -143,8 +143,7 @@ class Icons:
     couleur, et un glyphe absent s'affiche en carré vide.
     """
 
-    IMPORT = "↧"
-    PRONOTE = "⇄"
+    # Importer et Pronote portent de vraies images (cf. `ui.assets`), pas des glyphes.
     GENERATE = "▶"
     ADD = "+"
     CLOSE = "✕"

@@ -5,6 +5,9 @@ description = "Automatisation de la création de classes d'élèves selon des r�
 requires-python = ">=3.11"
 dependencies = [
     "customtkinter>=5.2",
+    # CTkImage et le recoloriage des pictogrammes reposent sur Pillow, que
+    # customtkinter n'exige pas lui-même.
+    "pillow>=10.0",
 ]
 
 [project.optional-dependencies]
@@ -22,3 +25,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"auto_classes.ui" = ["assets/*.png"]
