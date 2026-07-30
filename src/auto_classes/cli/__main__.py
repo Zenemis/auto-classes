@@ -16,10 +16,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _format_classroom_set(classroom_set: ClassroomSet) -> str:
     lines = []
-    for index, classroom in enumerate(classroom_set):
+    for classroom in classroom_set:
         tags = ", ".join(sorted(classroom.tags)) or "-"
         names = ", ".join(sorted(student.name for student in classroom.students)) or "(vide)"
-        lines.append(f"Classe {index} [tags: {tags}] : {names}")
+        lines.append(f"{classroom.name} [tags: {tags}] : {names}")
     return "\n".join(lines)
 
 
@@ -33,7 +33,7 @@ def main() -> None:
         if len(config.constraints) > 1:
             print(f"=== Contrainte {constraint_index + 1} ===")
 
-        solutions = generate_classes(config.students, config.classroom_tags, constraint, config.num_solutions)
+        solutions = generate_classes(config.students, config.classrooms, constraint, config.num_solutions)
 
         if not solutions:
             print("Aucune solution trouvée")

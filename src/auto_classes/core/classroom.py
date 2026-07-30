@@ -7,6 +7,7 @@ from auto_classes.core.student import Student
 class Classroom:
     students: list[Student] = field(default_factory=list)
     tags: set[str] = field(default_factory=set)
+    name: str = ""
 
     def __iter__(self):
         return iter(self.students)

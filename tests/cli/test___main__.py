@@ -23,7 +23,7 @@ def test_main_runs_algorithm_from_config_file(tmp_path: Path, capsys: pytest.Cap
         json.dumps(
             {
                 "students": ["Alice", "Bob"],
-                "classroom_tags": [[]],
+                "classrooms": [{"name": "A", "tags": []}],
                 "constraints": [{"type": "students_together", "student_a": "Alice", "student_b": "Bob"}],
             }
         ),
@@ -47,7 +47,7 @@ def test_main_runs_algorithm_for_each_constraint_when_several_are_given(
         json.dumps(
             {
                 "students": ["Alice", "Bob"],
-                "classroom_tags": [[]],
+                "classrooms": [{"name": "A", "tags": []}],
                 "constraints": [
                     {"type": "students_together", "student_a": "Alice", "student_b": "Bob"},
                     {"type": "students_apart", "student_a": "Alice", "student_b": "Bob"},

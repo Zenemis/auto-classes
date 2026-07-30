@@ -105,27 +105,34 @@ def test_not_scope_delegates_to_wrapped_constraint() -> None:
 
 
 def test_default_classroom_signature_is_none() -> None:
-    assert AlwaysTrue().classroom_signature(0) is None
+    assert AlwaysTrue().classroom_signature("A") is None
 
 
 def test_and_classroom_signature_merges_children_signatures() -> None:
-    combined = AndConstraint(ClassSizeConstraint(classroom_index=0, max_size=2), AlwaysTrue()).classroom_signature(0)
-    assert combined == frozenset({ClassSizeConstraint(classroom_index=0, max_size=2).classroom_signature(0)})
+    combined = AndConstraint(ClassSizeConstraint(classroom_name="A", max_size=2), AlwaysTrue()).classroom_signature(
+        "A"
+    )
+    assert combined == frozenset({ClassSizeConstraint(classroom_name="A", max_size=2).classroom_signature("A")})
 
 
-def test_and_classroom_signature_is_none_when_no_child_targets_the_index() -> None:
-    assert AndConstraint(ClassSizeConstraint(classroom_index=0, max_size=2), AlwaysTrue()).classroom_signature(1) is None
+def test_and_classroom_signature_is_none_when_no_child_targets_the_name() -> None:
+    assert (
+        AndConstraint(ClassSizeConstraint(classroom_name="A", max_size=2), AlwaysTrue()).classroom_signature("B")
+        is None
+    )
 
 
 def test_or_classroom_signature_merges_children_signatures() -> None:
-    combined = OrConstraint(ClassSizeConstraint(classroom_index=0, max_size=2), AlwaysTrue()).classroom_signature(0)
-    assert combined == frozenset({ClassSizeConstraint(classroom_index=0, max_size=2).classroom_signature(0)})
+    combined = OrConstraint(ClassSizeConstraint(classroom_name="A", max_size=2), AlwaysTrue()).classroom_signature(
+        "A"
+    )
+    assert combined == frozenset({ClassSizeConstraint(classroom_name="A", max_size=2).classroom_signature("A")})
 
 
 def test_not_classroom_signature_delegates_to_wrapped_constraint() -> None:
-    assert NotConstraint(ClassSizeConstraint(classroom_index=0, max_size=2)).classroom_signature(
-        0
-    ) == ClassSizeConstraint(classroom_index=0, max_size=2).classroom_signature(0)
+    assert NotConstraint(ClassSizeConstraint(classroom_name="A", max_size=2)).classroom_signature(
+        "A"
+    ) == ClassSizeConstraint(classroom_name="A", max_size=2).classroom_signature("A")
 
 
 def test_default_is_still_satisfiable_is_true() -> None:
@@ -145,11 +152,13 @@ def test_and_is_still_satisfiable_only_when_all_are() -> None:
 
 
 def test_and_to_dict_nests_children() -> None:
-    assert AndConstraint(StudentsTogether(alice, bob), ClassSizeConstraint(classroom_index=0, max_size=25)).to_dict() == {
+    assert AndConstraint(
+        StudentsTogether(alice, bob), ClassSizeConstraint(classroom_name="A", max_size=25)
+    ).to_dict() == {
         "type": "and",
         "constraints": [
             {"type": "students_together", "student_a": "Alice", "student_b": "Bob"},
-            {"type": "class_size", "classroom_index": 0, "min_size": None, "max_size": 25},
+            {"type": "class_size", "classroom_name": "A", "min_size": None, "max_size": 25},
         ],
     }
 
@@ -160,7 +169,7 @@ def test_and_from_dict_nests_children() -> None:
             "type": "and",
             "constraints": [
                 {"type": "students_together", "student_a": "Alice", "student_b": "Bob"},
-                {"type": "class_size", "classroom_index": 0, "min_size": None, "max_size": 25},
+                {"type": "class_size", "classroom_name": "A", "min_size": None, "max_size": 25},
             ],
         }
     )
@@ -213,7 +222,7 @@ def test_dict_round_trips_nested_tree() -> None:
     original = AndConstraint(
         OrConstraint(StudentsTogether(alice, bob), StudentsApart(alice, bob)),
         NotConstraint(StudentsApart(alice, bob)),
-        ClassSizeConstraint(classroom_index=0, min_size=10, max_size=30),
+        ClassSizeConstraint(classroom_name="A", min_size=10, max_size=30),
     )
     assert Constraint.from_dict(original.to_dict()).to_dict() == original.to_dict()
 

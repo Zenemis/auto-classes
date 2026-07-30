@@ -19,3 +19,9 @@ class ClassroomSet:
             if student in classroom:
                 return classroom
         return None
+
+    def classroom_named(self, name: str) -> Classroom | None:
+        for classroom in self.classrooms:
+            if classroom.name == name:
+                return classroom
+        return None

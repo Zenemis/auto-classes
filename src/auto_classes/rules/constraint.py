@@ -39,8 +39,8 @@ class Constraint(ABC):
         """
         return None
 
-    def classroom_signature(self, index: int) -> Hashable:
-        """Résumé hashable de ce que cette contrainte impose spécifiquement à la classe `index` ;
+    def classroom_signature(self, name: str) -> Hashable:
+        """Résumé hashable de ce que cette contrainte impose spécifiquement à la classe `name` ;
         None par défaut (la contrainte ne distingue pas cette classe en particulier).
 
         Sert au bris de symétrie (generate_classes._symmetry_groups) : deux classes portant les
@@ -98,8 +98,8 @@ class AndConstraint(Constraint):
     def scope(self) -> "set[Student] | None":
         return _merge_scopes(constraint.scope() for constraint in self.constraints)
 
-    def classroom_signature(self, index: int) -> Hashable:
-        return _merge_classroom_signatures(constraint.classroom_signature(index) for constraint in self.constraints)
+    def classroom_signature(self, name: str) -> Hashable:
+        return _merge_classroom_signatures(constraint.classroom_signature(name) for constraint in self.constraints)
 
     def is_still_satisfiable(self, classroom_set: ClassroomSet) -> bool:
         return all(constraint.is_still_satisfiable(classroom_set) for constraint in self.constraints)
@@ -124,8 +124,8 @@ class OrConstraint(Constraint):
     def scope(self) -> "set[Student] | None":
         return _merge_scopes(constraint.scope() for constraint in self.constraints)
 
-    def classroom_signature(self, index: int) -> Hashable:
-        return _merge_classroom_signatures(constraint.classroom_signature(index) for constraint in self.constraints)
+    def classroom_signature(self, name: str) -> Hashable:
+        return _merge_classroom_signatures(constraint.classroom_signature(name) for constraint in self.constraints)
 
     def to_dict(self) -> dict[str, Any]:
         return {"type": self.type_name, "constraints": [c.to_dict() for c in self.constraints]}
@@ -147,8 +147,8 @@ class NotConstraint(Constraint):
     def scope(self) -> "set[Student] | None":
         return self.constraint.scope()
 
-    def classroom_signature(self, index: int) -> Hashable:
-        return self.constraint.classroom_signature(index)
+    def classroom_signature(self, name: str) -> Hashable:
+        return self.constraint.classroom_signature(name)
 
     def to_dict(self) -> dict[str, Any]:
         return {"type": self.type_name, "constraint": self.constraint.to_dict()}

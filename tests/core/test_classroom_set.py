@@ -30,3 +30,16 @@ def test_classroom_of_returns_containing_classroom() -> None:
 def test_classroom_of_returns_none_when_student_not_placed() -> None:
     classroom_set = ClassroomSet([Classroom([alice])])
     assert classroom_set.classroom_of(carol) is None
+
+
+def test_classroom_named_returns_matching_classroom() -> None:
+    classroom_a = Classroom([alice], name="A")
+    classroom_b = Classroom([bob], name="B")
+    classroom_set = ClassroomSet([classroom_a, classroom_b])
+    assert classroom_set.classroom_named("A") is classroom_a
+    assert classroom_set.classroom_named("B") is classroom_b
+
+
+def test_classroom_named_returns_none_when_no_match() -> None:
+    classroom_set = ClassroomSet([Classroom([alice], name="A")])
+    assert classroom_set.classroom_named("Inconnue") is None

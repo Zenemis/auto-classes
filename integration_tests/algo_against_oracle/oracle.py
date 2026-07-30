@@ -18,16 +18,16 @@ def canonical_form(classroom_set: ClassroomSet) -> CanonicalClassroomSet:
     )
 
 
-def generate_all_classroom_sets(students: list[Student], classroom_tags: list[set[str]]) -> list[ClassroomSet]:
-    """Force brute : toutes les façons de répartir `students` dans `len(classroom_tags)` classes,
+def generate_all_classroom_sets(students: list[Student], classrooms: list[Classroom]) -> list[ClassroomSet]:
+    """Force brute : toutes les façons de répartir `students` dans `len(classrooms)` classes,
     sans tenir compte d'aucune contrainte. C'est l'espace de recherche complet de l'algorithme."""
-    num_classrooms = len(classroom_tags)
+    num_classrooms = len(classrooms)
     all_classroom_sets: list[ClassroomSet] = []
     for assignment in product(range(num_classrooms), repeat=len(students)):
-        classrooms = [Classroom(tags=set(tags)) for tags in classroom_tags]
+        working_classrooms = [Classroom(tags=set(c.tags), name=c.name) for c in classrooms]
         for student, classroom_index in zip(students, assignment):
-            classrooms[classroom_index].students.append(student)
-        all_classroom_sets.append(ClassroomSet(classrooms))
+            working_classrooms[classroom_index].students.append(student)
+        all_classroom_sets.append(ClassroomSet(working_classrooms))
     return all_classroom_sets
 
 
@@ -35,10 +35,10 @@ def format_classroom_set(classroom_set: ClassroomSet) -> str:
     """Représentation lisible d'un ClassroomSet, pour inspection humaine (ex. dump de faux
     positifs/négatifs à la suite d'un échec de test)."""
     lines = []
-    for index, classroom in enumerate(classroom_set):
+    for classroom in classroom_set:
         tags = ", ".join(sorted(classroom.tags)) or "-"
         names = ", ".join(sorted(student.name for student in classroom.students)) or "(vide)"
-        lines.append(f"Classe {index} [tags: {tags}] : {names}")
+        lines.append(f"{classroom.name} [tags: {tags}] : {names}")
     return "\n".join(lines)
 
 

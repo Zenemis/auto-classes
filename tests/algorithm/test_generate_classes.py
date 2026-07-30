@@ -1,7 +1,7 @@
 import pytest
 
 from auto_classes.algorithm import generate_classes
-from auto_classes.core import ClassroomSet, Student
+from auto_classes.core import Classroom, ClassroomSet, Student
 from auto_classes.rules import (
     AndConstraint,
     ClassSizeConstraint,
@@ -19,8 +19,8 @@ dan = Student("Dan")
 NO_CONSTRAINT = PredicateConstraint(lambda cs: True)
 
 
-def _untagged(count: int) -> list[set[str]]:
-    return [set() for _ in range(count)]
+def _untagged(count: int) -> list[Classroom]:
+    return [Classroom(name=str(i)) for i in range(count)]
 
 
 def _partition(classroom_set: ClassroomSet) -> frozenset[frozenset[Student]]:
@@ -85,8 +85,8 @@ def test_students_apart_constraint_is_respected() -> None:
 def test_per_classroom_class_size_constraint_is_respected() -> None:
     students = [alice, bob, carol, dan]
     constraint = AndConstraint(
-        ClassSizeConstraint(classroom_index=0, min_size=2, max_size=2),
-        ClassSizeConstraint(classroom_index=1, min_size=2, max_size=2),
+        ClassSizeConstraint(classroom_name="0", min_size=2, max_size=2),
+        ClassSizeConstraint(classroom_name="1", min_size=2, max_size=2),
     )
     solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
     assert solutions
@@ -96,11 +96,11 @@ def test_per_classroom_class_size_constraint_is_respected() -> None:
 
 def test_class_size_constraint_only_applies_to_its_own_classroom() -> None:
     students = [alice, bob, carol]
-    constraint = ClassSizeConstraint(classroom_index=0, max_size=3)
+    constraint = ClassSizeConstraint(classroom_name="0", max_size=3)
     solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
     assert solutions
-    # La classe 1 (non contrainte) peut légitimement recevoir les 3 élèves.
-    assert any(len(solution.classrooms[1]) == 3 for solution in solutions)
+    # La classe "1" (non contrainte) peut légitimement recevoir les 3 élèves.
+    assert any(len(solution.classroom_named("1")) == 3 for solution in solutions)
 
 
 def test_identical_bounds_on_same_tagged_classrooms_keep_them_symmetric() -> None:
@@ -109,8 +109,8 @@ def test_identical_bounds_on_same_tagged_classrooms_keep_them_symmetric() -> Non
     équivalentes (mêmes groupes d'élèves, juste échangés entre les deux classes)."""
     students = [alice, bob, carol]
     constraint = AndConstraint(
-        ClassSizeConstraint(classroom_index=0, max_size=2),
-        ClassSizeConstraint(classroom_index=1, max_size=2),
+        ClassSizeConstraint(classroom_name="0", max_size=2),
+        ClassSizeConstraint(classroom_name="1", max_size=2),
     )
     solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
     partitions = [_partition(solution) for solution in solutions]
@@ -119,23 +119,23 @@ def test_identical_bounds_on_same_tagged_classrooms_keep_them_symmetric() -> Non
 
 def test_different_bounds_on_same_tagged_classrooms_remain_reachable() -> None:
     """Des bornes différentes sur deux classes de mêmes tags les rendent non interchangeables :
-    une solution où la classe 0 (max 1) reste vide et la classe 1 (min 2) prend tout le monde
-    doit rester atteignable, même si le bris de symétrie plaçait auparavant le 1er élève dans
-    la classe 0 en priorité."""
+    une solution où la classe "0" (max 1) reste vide et la classe "1" (min 2) prend tout le
+    monde doit rester atteignable, même si le bris de symétrie plaçait auparavant le 1er élève
+    dans la classe "0" en priorité."""
     students = [alice, bob, carol]
     constraint = AndConstraint(
-        ClassSizeConstraint(classroom_index=0, max_size=1),
-        ClassSizeConstraint(classroom_index=1, min_size=2),
+        ClassSizeConstraint(classroom_name="0", max_size=1),
+        ClassSizeConstraint(classroom_name="1", min_size=2),
     )
     solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
-    assert any(len(solution.classrooms[0]) == 0 for solution in solutions)
+    assert any(len(solution.classroom_named("0")) == 0 for solution in solutions)
 
 
 def test_max_size_prunes_without_ever_producing_invalid_solutions() -> None:
     students = [alice, bob, carol, dan]
     constraint = AndConstraint(
-        ClassSizeConstraint(classroom_index=0, max_size=1),
-        ClassSizeConstraint(classroom_index=1, max_size=1),
+        ClassSizeConstraint(classroom_name="0", max_size=1),
+        ClassSizeConstraint(classroom_name="1", max_size=1),
     )
     # 4 élèves, 2 classes de taille max 1 : insatisfaisable, ne doit jamais planter ni
     # renvoyer une solution qui dépasse max_size.
@@ -160,9 +160,9 @@ def test_unsatisfiable_constraint_yields_no_solutions() -> None:
 
 def test_tagged_classroom_is_available_for_student_tag_presence() -> None:
     students = [alice, bob]
-    classroom_tags = [{"latin"}, set()]
+    classrooms = [Classroom(name="latin", tags={"latin"}), Classroom(name="autre")]
     constraint = StudentTagPresence(alice, "latin", present=True)
-    solutions = generate_classes(students, classroom_tags, constraint, num_solutions=10)
+    solutions = generate_classes(students, classrooms, constraint, num_solutions=10)
     assert solutions
     for solution in solutions:
         assert "latin" in solution.classroom_of(alice).tags
@@ -170,8 +170,8 @@ def test_tagged_classroom_is_available_for_student_tag_presence() -> None:
 
 def test_distinctly_tagged_classrooms_are_not_merged_by_symmetry_breaking() -> None:
     students = [alice, bob]
-    classroom_tags = [{"latin"}, {"grec"}]
-    solutions = generate_classes(students, classroom_tags, NO_CONSTRAINT, num_solutions=10)
+    classrooms = [Classroom(name="latin", tags={"latin"}), Classroom(name="grec", tags={"grec"})]
+    solutions = generate_classes(students, classrooms, NO_CONSTRAINT, num_solutions=10)
     # chaque classe est unique (tag différent), donc aucune restriction de symétrie ne doit
     # empêcher un élève d'être placé dans la classe "grec" (2e classe) en premier.
     tags_used = {frozenset(solution.classroom_of(student).tags) for solution in solutions for student in students}
@@ -184,7 +184,7 @@ def test_symmetry_breaking_applies_per_tag_group() -> None:
     # 2 classes non taguées (interchangeables entre elles) + 1 classe taguée (à part) :
     # la brise de symétrie doit s'appliquer entre les 2 classes non taguées, mais ne doit
     # pas empêcher un même regroupement d'élèves de finir dans la classe taguée séparément.
-    classroom_tags = [set(), set(), {"latin"}]
-    solutions = generate_classes(students, classroom_tags, NO_CONSTRAINT, num_solutions=100)
+    classrooms = [Classroom(name="0"), Classroom(name="1"), Classroom(name="latin", tags={"latin"})]
+    solutions = generate_classes(students, classrooms, NO_CONSTRAINT, num_solutions=100)
     partitions = [_tagged_partition(solution) for solution in solutions]
     assert len(partitions) == len(set(partitions))

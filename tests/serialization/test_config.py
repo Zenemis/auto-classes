@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from auto_classes.core import Student
+from auto_classes.core import Classroom, Student
 from auto_classes.rules.constraint import AndConstraint
 from auto_classes.rules.student_relation import StudentsApart, StudentsTogether
 from auto_classes.serialization.config import load_config
@@ -10,7 +10,7 @@ from auto_classes.serialization.config import load_config
 def _write_config(path: Path, **overrides: object) -> Path:
     data = {
         "students": ["Alice", "Bob"],
-        "classroom_tags": [["latin"], []],
+        "classrooms": [{"name": "A", "tags": ["latin"]}, {"name": "B", "tags": []}],
         "constraints": [{"type": "students_together", "student_a": "Alice", "student_b": "Bob"}],
         **overrides,
     }
@@ -19,10 +19,10 @@ def _write_config(path: Path, **overrides: object) -> Path:
     return config_path
 
 
-def test_load_config_parses_students_and_classroom_tags(tmp_path: Path) -> None:
+def test_load_config_parses_students_and_classrooms(tmp_path: Path) -> None:
     config = load_config(_write_config(tmp_path))
     assert config.students == [Student("Alice"), Student("Bob")]
-    assert config.classroom_tags == [{"latin"}, set()]
+    assert config.classrooms == [Classroom(name="A", tags={"latin"}), Classroom(name="B", tags=set())]
 
 
 def test_load_config_parses_constraints(tmp_path: Path) -> None:

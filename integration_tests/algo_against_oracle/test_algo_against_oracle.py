@@ -39,18 +39,18 @@ def clear_previous_results() -> None:
 def all_classroom_sets() -> list[ClassroomSet]:
     """Chargé une seule fois pour tout le module et gardé en mémoire, plutôt que rechargé
     depuis le disque à chaque contrainte testée (cf. cached_valid_classroom_sets)."""
-    all_sets = cached_all_classroom_sets(CONFIG.students, CONFIG.classroom_tags)
+    all_sets = cached_all_classroom_sets(CONFIG.students, CONFIG.classrooms)
     print(f"\n[oracle] {len(all_sets)} ClassroomSet générés au total (univers complet)")
     return all_sets
 
 
 @pytest.mark.parametrize("constraint", CONFIG.constraints, ids=_constraint_id)
 def test_algorithm_matches_oracle(constraint: Constraint, all_classroom_sets: list[ClassroomSet]) -> None:
-    valid = cached_valid_classroom_sets(CONFIG.students, CONFIG.classroom_tags, constraint, all_classroom_sets)
+    valid = cached_valid_classroom_sets(CONFIG.students, CONFIG.classrooms, constraint, all_classroom_sets)
     print(f"[oracle] {_constraint_id(constraint)} : {len(valid)} ClassroomSet valides")
     num_solutions = max(len(valid), 1)
 
-    results = generate_classes(CONFIG.students, CONFIG.classroom_tags, constraint, num_solutions)
+    results = generate_classes(CONFIG.students, CONFIG.classrooms, constraint, num_solutions)
     result_by_key = {canonical_form(result): result for result in results}
 
     duplicate_count = len(results) - len(result_by_key)
