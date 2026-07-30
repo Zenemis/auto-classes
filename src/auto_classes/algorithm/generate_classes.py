@@ -17,12 +17,15 @@ def _order_by_most_constrained(students: list[Student], scoped: list[Constraint]
     return sorted(students, key=degree, reverse=True)
 
 
-def _symmetry_groups(classroom_tags: list[set[str]]) -> list[list[int]]:
-    """Regroupe les indices de classes par tag-set identique : seules des classes portant
-    exactement les mêmes tags sont interchangeables entre elles."""
-    groups: dict[frozenset[str], list[int]] = defaultdict(list)
+def _symmetry_groups(classroom_tags: list[set[str]], constraint: Constraint) -> list[list[int]]:
+    """Regroupe les indices de classes interchangeables : même tag-set, et même signature vis-à-vis
+    de la contrainte globale (cf. Constraint.classroom_signature). Deux classes de mêmes tags avec
+    des ClassSizeConstraint aux bornes identiques restent groupées ; des bornes différentes (ou une
+    seule des deux classes contrainte) les séparent en groupes distincts."""
+    groups: dict[tuple[frozenset[str], object], list[int]] = defaultdict(list)
     for index, tags in enumerate(classroom_tags):
-        groups[frozenset(tags)].append(index)
+        key = (frozenset(tags), constraint.classroom_signature(index))
+        groups[key].append(index)
     return list(groups.values())
 
 
@@ -52,7 +55,7 @@ def generate_classes(
     global_conjuncts = [c for c in conjuncts if c.scope() is None]
     scoped_conjuncts = [c for c in conjuncts if c.scope() is not None]
     order = _order_by_most_constrained(students, scoped_conjuncts)
-    symmetry_groups = _symmetry_groups(classroom_tags)
+    symmetry_groups = _symmetry_groups(classroom_tags, constraint)
 
     solutions: list[ClassroomSet] = []
     classrooms = [Classroom(tags=set(tags)) for tags in classroom_tags]

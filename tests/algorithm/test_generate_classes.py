@@ -82,18 +82,61 @@ def test_students_apart_constraint_is_respected() -> None:
         assert solution.classroom_of(alice) is not solution.classroom_of(bob)
 
 
-def test_global_class_size_constraint_is_respected() -> None:
+def test_per_classroom_class_size_constraint_is_respected() -> None:
     students = [alice, bob, carol, dan]
-    constraint = ClassSizeConstraint(min_size=2, max_size=2)
+    constraint = AndConstraint(
+        ClassSizeConstraint(classroom_index=0, min_size=2, max_size=2),
+        ClassSizeConstraint(classroom_index=1, min_size=2, max_size=2),
+    )
     solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
     assert solutions
     for solution in solutions:
         assert all(len(classroom) == 2 for classroom in solution)
 
 
+def test_class_size_constraint_only_applies_to_its_own_classroom() -> None:
+    students = [alice, bob, carol]
+    constraint = ClassSizeConstraint(classroom_index=0, max_size=3)
+    solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
+    assert solutions
+    # La classe 1 (non contrainte) peut légitimement recevoir les 3 élèves.
+    assert any(len(solution.classrooms[1]) == 3 for solution in solutions)
+
+
+def test_identical_bounds_on_same_tagged_classrooms_keep_them_symmetric() -> None:
+    """Deux classes de mêmes tags (ici non taguées) avec exactement la même borne restent
+    interchangeables : l'algorithme ne doit pas gaspiller num_solutions sur des permutations
+    équivalentes (mêmes groupes d'élèves, juste échangés entre les deux classes)."""
+    students = [alice, bob, carol]
+    constraint = AndConstraint(
+        ClassSizeConstraint(classroom_index=0, max_size=2),
+        ClassSizeConstraint(classroom_index=1, max_size=2),
+    )
+    solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
+    partitions = [_partition(solution) for solution in solutions]
+    assert len(partitions) == len(set(partitions))
+
+
+def test_different_bounds_on_same_tagged_classrooms_remain_reachable() -> None:
+    """Des bornes différentes sur deux classes de mêmes tags les rendent non interchangeables :
+    une solution où la classe 0 (max 1) reste vide et la classe 1 (min 2) prend tout le monde
+    doit rester atteignable, même si le bris de symétrie plaçait auparavant le 1er élève dans
+    la classe 0 en priorité."""
+    students = [alice, bob, carol]
+    constraint = AndConstraint(
+        ClassSizeConstraint(classroom_index=0, max_size=1),
+        ClassSizeConstraint(classroom_index=1, min_size=2),
+    )
+    solutions = generate_classes(students, _untagged(2), constraint, num_solutions=10)
+    assert any(len(solution.classrooms[0]) == 0 for solution in solutions)
+
+
 def test_max_size_prunes_without_ever_producing_invalid_solutions() -> None:
     students = [alice, bob, carol, dan]
-    constraint = ClassSizeConstraint(max_size=1)
+    constraint = AndConstraint(
+        ClassSizeConstraint(classroom_index=0, max_size=1),
+        ClassSizeConstraint(classroom_index=1, max_size=1),
+    )
     # 4 élèves, 2 classes de taille max 1 : insatisfaisable, ne doit jamais planter ni
     # renvoyer une solution qui dépasse max_size.
     assert generate_classes(students, _untagged(2), constraint, num_solutions=10) == []

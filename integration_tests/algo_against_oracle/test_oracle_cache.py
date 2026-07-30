@@ -65,7 +65,7 @@ def test_constraint_hash_is_deterministic() -> None:
 
 def test_constraint_hash_differs_for_different_constraints() -> None:
     assert oracle_cache._constraint_hash(StudentsTogether(alice, bob)) != oracle_cache._constraint_hash(
-        ClassSizeConstraint(max_size=2)
+        ClassSizeConstraint(classroom_index=0, max_size=2)
     )
 
 
