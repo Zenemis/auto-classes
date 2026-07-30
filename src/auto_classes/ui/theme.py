@@ -46,12 +46,55 @@ class Palette:
     DANGER: Color = ("#C2483B", "#D8695A")
     DANGER_HOVER: Color = ("#A83A2F", "#C25546")
 
-    TOGETHER: Color = ("#2C6FB5", "#6199DE")
+    # Quatre familles franchement distinctes : vert-canard / rouge / bleu / or.
+    # « Mettre avec » assume la teinte de marque : un vert-canard assez sombre pour
+    # porter du texte blanc *est* celui de Pronote. Le rapprochement avec le bouton
+    # « Générer » est bien moindre que l'ancienne confusion entre « Mettre » et
+    # « Inclure », tous deux bleu-violet.
+    TOGETHER: Color = ("#0A8F7C", "#22B49B")
     APART: Color = ("#C2483B", "#D8695A")
-    # Volontairement pas vert : la couleur « inclus » ne doit pas se confondre avec le
-    # vert-canard de l'action principale, notamment sur les pastilles d'option.
-    INCLUDE: Color = ("#6152B5", "#9186DC")
-    EXCLUDE: Color = ("#B0731A", "#D2932F")
+    # Incliné vers le violet (+12° de teinte) : à saturation et clarté égales, un bleu
+    # franc restait trop proche du vert-cyan de TOGETHER pour un coup d'œil rapide.
+    INCLUDE: Color = ("#2C54B5", "#6180DE")
+    # Or plutôt qu'ambre, pour s'éloigner du rouge de « Séparer ».
+    EXCLUDE: Color = ("#9A7A12", "#C9A233")
+
+    INK: Color = ("#12181A", "#12181A")
+    """Texte sombre, pour les fonds clairs sur lesquels le blanc ne tiendrait pas."""
+
+
+def _relative_luminance(color: str) -> float:
+    def channel(value: int) -> float:
+        ratio = value / 255
+        return ratio / 12.92 if ratio <= 0.04045 else ((ratio + 0.055) / 1.055) ** 2.4
+
+    red, green, blue = (int(color[index : index + 2], 16) for index in (1, 3, 5))
+    return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
+
+
+def _contrast(first: str, second: str) -> float:
+    """Rapport de contraste WCAG entre deux couleurs (1 = identiques, 21 = noir/blanc)."""
+    lighter, darker = sorted((_relative_luminance(first), _relative_luminance(second)))
+    return (darker + 0.05) / (lighter + 0.05)
+
+
+MIN_CONTRAST = 4.0
+"""Plancher de lisibilité pour un libellé court et gras posé sur un aplat."""
+
+
+def readable_on(background: Color) -> Color:
+    """Couleur de texte lisible sur `background`, décidée thème par thème.
+
+    Le blanc est préféré — c'est ce qu'on attend sur un aplat coloré — mais les
+    variantes sombres des accents sont volontairement claires : le blanc y tomberait
+    autour de 2,5:1. On bascule alors sur l'encre sombre, qui y dépasse 5:1.
+    """
+    return tuple(  # type: ignore[return-value]
+        Palette.TEXT_ON_ACCENT[index]
+        if _contrast(background[index], Palette.TEXT_ON_ACCENT[index]) >= MIN_CONTRAST
+        else Palette.INK[index]
+        for index in (0, 1)
+    )
 
 
 class Metrics:

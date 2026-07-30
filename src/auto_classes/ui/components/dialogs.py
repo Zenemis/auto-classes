@@ -22,7 +22,7 @@ class ModalDialog(ctk.CTkToplevel):
         super().__init__(master)
 
         self._result: Any = None
-        self._min_width = width
+        self._preferred_width = width
 
         self.title(title)
         self.configure(fg_color=Palette.WINDOW)
@@ -73,7 +73,7 @@ class ModalDialog(ctk.CTkToplevel):
 
     def _center_on_parent(self) -> None:
         parent = self.master.winfo_toplevel()
-        width = max(self._min_width, self.winfo_reqwidth())
+        width = max(self._preferred_width, self.winfo_reqwidth())
         height = self.winfo_reqheight()
         x = parent.winfo_rootx() + max(0, (parent.winfo_width() - width) // 2)
         y = parent.winfo_rooty() + max(0, (parent.winfo_height() - height) // 3)

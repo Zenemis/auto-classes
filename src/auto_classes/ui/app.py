@@ -49,6 +49,9 @@ class App(ctk.CTk):
             fg_color="transparent",
             corner_radius=Metrics.RADIUS_MD,
             border_width=0,
+            # Onglet actif laissé en blanc : `CTkSegmentedButton` n'a qu'une couleur de
+            # texte pour les deux états, un onglet coloré laisserait du texte blanc sur
+            # les onglets inactifs. La couleur de marque vit dans les titres de bande.
             segmented_button_fg_color=Palette.SURFACE_ALT,
             segmented_button_selected_color=Palette.SURFACE,
             segmented_button_selected_hover_color=Palette.SURFACE,

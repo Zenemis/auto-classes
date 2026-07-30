@@ -24,7 +24,7 @@ from auto_classes.ui.components import (
 from auto_classes.ui.components.labels import ellipsize
 from auto_classes.ui.interaction import InteractionState, Tool
 from auto_classes.ui.session import SessionError, SessionState
-from auto_classes.ui.theme import Color, Fonts, Icons, Metrics, Palette
+from auto_classes.ui.theme import Color, Fonts, Icons, Metrics, Palette, readable_on
 
 TOOL_ACCENTS: dict[Tool, Color] = {
     Tool.APART: Palette.APART,
@@ -202,7 +202,7 @@ class StudentInspector(Panel):
                     tag,
                     on_click=lambda chosen, tool=active: self._toggle_tag(tool, chosen),
                     color=accent,
-                    text_color=Palette.TEXT_ON_ACCENT,
+                    text_color=readable_on(accent),
                     outlined=not applied,
                 ).pack(anchor="w", pady=1)
 

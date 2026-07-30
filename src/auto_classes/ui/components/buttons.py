@@ -10,7 +10,7 @@ from collections.abc import Callable
 import customtkinter as ctk
 import tkinter as tk
 
-from auto_classes.ui.theme import Color, Fonts, Metrics, Palette
+from auto_classes.ui.theme import Color, Fonts, Metrics, Palette, readable_on
 
 
 def _label(text: str, icon: str | None) -> str:
@@ -140,7 +140,7 @@ class ToolButton(ctk.CTkButton):
             self.configure(
                 fg_color=self._accent,
                 hover_color=self._accent,
-                text_color=Palette.TEXT_ON_ACCENT,
+                text_color=readable_on(self._accent),
                 border_color=self._accent,
             )
         else:

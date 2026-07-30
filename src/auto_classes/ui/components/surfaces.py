@@ -67,11 +67,13 @@ class SectionHeader(Group):
         super().__init__(master)
         self.grid_columnconfigure(1, weight=1)
 
+        # Titre de bande à la couleur de marque : repère de lecture fort, comme les
+        # intitulés de rubrique de Pronote.
         ctk.CTkLabel(
             self,
             text=title.upper(),
             font=Fonts.small_bold(),
-            text_color=Palette.TEXT_MUTED,
+            text_color=Palette.PRIMARY,
         ).grid(row=0, column=0, sticky="w")
 
         self._detail = ctk.CTkLabel(
@@ -112,7 +114,10 @@ class ClickableCard(ctk.CTkFrame):
         self._base_color = base_color
         self._hover_color = hover_color
         self._selected_color = selected_color
-        self._border_color = border_color
+        # Surtout pas `_border_color` : c'est l'attribut où CTkFrame range la couleur de
+        # bordure *courante*, et il l'écrase à chaque `configure`. La teinte de repos y
+        # serait perdue dès la première sélection, et la carte garderait son pourtour.
+        self._idle_border_color = border_color
         self._selected_border_color = selected_border_color
 
         self._hovered = False
@@ -187,7 +192,7 @@ class ClickableCard(ctk.CTkFrame):
         elif self._selected:
             border = self._selected_border_color
         else:
-            border = self._border_color
+            border = self._idle_border_color
 
         # Cible déjà contrainte : bordure appuyée plutôt que fond coloré, qui rendrait
         # illisibles les pastilles de couleur et le nom.
