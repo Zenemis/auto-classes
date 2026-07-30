@@ -1,0 +1,16 @@
+{
+  "students": ["Alice", "Bob", "Carol", "Dan", "Eve", "Frank"],
+  "classroom_tags": [["latin"], []],
+  "constraints": [
+    {
+      "type": "and",
+      "constraints": [
+        {"type": "students_together", "student_a": "Alice", "student_b": "Bob"},
+        {"type": "students_apart", "student_a": "Carol", "student_b": "Dan"},
+        {"type": "class_size", "classroom_index": 0, "min_size": 2, "max_size": 4},
+        {"type": "class_size", "classroom_index": 1, "min_size": 2, "max_size": 4}
+      ]
+    }
+  ],
+  "num_solutions": 3
+}

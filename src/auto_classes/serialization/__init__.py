@@ -1,4 +1,5 @@
 from auto_classes.serialization.classroom_tags import dump_classroom_tags, load_classroom_tags
+from auto_classes.serialization.config import Config, load_config
 from auto_classes.serialization.students import dump_students, load_students
 
 __all__ = [
@@ -6,4 +7,6 @@ __all__ = [
     "load_students",
     "dump_classroom_tags",
     "load_classroom_tags",
+    "Config",
+    "load_config",
 ]

@@ -6,15 +6,15 @@ import pytest
 from auto_classes.algorithm.generate_classes import generate_classes
 from auto_classes.core import ClassroomSet
 from auto_classes.rules.constraint import Constraint
+from auto_classes.serialization import load_config
 from integration_tests.algo_against_oracle.oracle import canonical_form, format_classroom_set
 from integration_tests.algo_against_oracle.oracle_cache import (
     _constraint_hash,
     cached_all_classroom_sets,
     cached_valid_classroom_sets,
 )
-from integration_tests.algo_against_oracle.oracle_config import load_oracle_config
 
-CONFIG = load_oracle_config(Path(__file__).parent / "oracle.config")
+CONFIG = load_config(Path(__file__).parent / "oracle.config")
 RESULTS_DIR = Path(__file__).parent / "oracle_results"
 
 
@@ -44,7 +44,7 @@ def all_classroom_sets() -> list[ClassroomSet]:
     return all_sets
 
 
-@pytest.mark.parametrize("constraint", CONFIG.constraint_sets, ids=_constraint_id)
+@pytest.mark.parametrize("constraint", CONFIG.constraints, ids=_constraint_id)
 def test_algorithm_matches_oracle(constraint: Constraint, all_classroom_sets: list[ClassroomSet]) -> None:
     valid = cached_valid_classroom_sets(CONFIG.students, CONFIG.classroom_tags, constraint, all_classroom_sets)
     print(f"[oracle] {_constraint_id(constraint)} : {len(valid)} ClassroomSet valides")
