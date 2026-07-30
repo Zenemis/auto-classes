@@ -47,9 +47,25 @@ def test_students_are_sorted_by_name(session):
 
 def test_add_students_keeps_the_valid_ones_and_reports_the_rest(session):
     session.add_student("Alice")
-    added, problems = session.add_students(["Bob", "Alice", "Carole"])
+    added, rejected = session.add_students(["Bob", "Alice", "Carole"])
+
     assert [student.name for student in added] == ["Bob", "Carole"]
-    assert len(problems) == 1
+    assert [name for name, _reason in rejected] == ["Alice"]
+    assert "figure déjà" in rejected[0][1]
+
+
+def test_add_students_reports_the_rejected_name_as_typed(session):
+    """La saisie en place remet ces noms dans le champ : ils doivent être restitués tels quels."""
+    added, rejected = session.add_students(["  Alice  ", "Alice"])
+
+    assert [student.name for student in added] == ["Alice"]
+    assert [name for name, _reason in rejected] == ["Alice"]
+
+
+def test_add_students_accepts_everything_when_nothing_clashes(session):
+    added, rejected = session.add_students(["Bob", "Carole"])
+    assert len(added) == 2
+    assert rejected == []
 
 
 def test_rename_student_accepts_its_own_name(session):

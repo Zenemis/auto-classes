@@ -15,6 +15,7 @@ from auto_classes.ui.components.chips import (
     CountBadge,
     TagPill,
 )
+from auto_classes.ui.components.composer import InlineComposer
 from auto_classes.ui.components.dialogs import (
     ConfirmDialog,
     ModalDialog,
@@ -50,6 +51,7 @@ __all__ = [
     "ConfirmDialog",
     "NoticeDialog",
     "FlowGrid",
+    "InlineComposer",
     "EllipsizedLabel",
     "Group",
     "Panel",

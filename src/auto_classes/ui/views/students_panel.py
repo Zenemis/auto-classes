@@ -12,10 +12,9 @@ from auto_classes.ui.components import (
     EmptyState,
     FlowGrid,
     IconButton,
-    NoticeDialog,
+    InlineComposer,
     Panel,
     SectionHeader,
-    TextPromptDialog,
 )
 from auto_classes.ui.interaction import InteractionState
 from auto_classes.ui.session import SessionError, SessionState
@@ -24,6 +23,15 @@ from auto_classes.ui.views.student_inspector import TOOL_ACCENTS, StudentInspect
 from auto_classes.ui.views.student_tile import StudentTile
 
 NAME_SEPARATORS = (",", ";", "\t")
+
+# Lignes de la bande, nommées : la liste, l'état vide et l'inspecteur doivent occuper
+# la même, sous peine de voir la liste glisser d'un cran à la sélection d'un élève.
+ROW_HEADER = 0
+ROW_COMPOSER = 1
+ROW_BODY = 2
+
+COLUMN_LIST = 0
+COLUMN_INSPECTOR = 1
 
 
 class StudentsPanel(Panel):
@@ -36,16 +44,36 @@ class StudentsPanel(Panel):
         self._tiles: dict[str, StudentTile] = {}
         self._filter = ""
 
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(COLUMN_LIST, weight=1)
+        self.grid_rowconfigure(ROW_BODY, weight=1)
 
         self._build_header()
+
+        self._composer = InlineComposer(
+            self,
+            on_submit=self._submit_students,
+            placeholder="Nom de l'élève — plusieurs noms séparés par des virgules",
+        )
+        self._composer.grid(
+            row=ROW_COMPOSER,
+            column=COLUMN_LIST,
+            sticky="ew",
+            padx=Metrics.PAD_MD,
+            pady=(0, Metrics.PAD_SM),
+        )
+        self._composer.close()  # replié tant que « + » n'a pas été cliqué
 
         self._list = FlowGrid(
             self,
             min_tile_width=Metrics.STUDENT_TILE_WIDTH,
         )
-        self._list.grid(row=1, column=0, sticky="nsew", padx=(Metrics.PAD_SM, 0), pady=(0, Metrics.PAD_SM))
+        self._list.grid(
+            row=ROW_BODY,
+            column=COLUMN_LIST,
+            sticky="nsew",
+            padx=(Metrics.PAD_SM, 0),
+            pady=(0, Metrics.PAD_SM),
+        )
 
         self._empty = EmptyState(
             self,
@@ -85,7 +113,7 @@ class StudentsPanel(Panel):
         self._search.bind("<KeyRelease>", self._on_search)
 
         IconButton(
-            self._header.actions, Icons.ADD, self._add_students, fg_color=Palette.SURFACE_ALT
+            self._header.actions, Icons.ADD, self._toggle_composer, fg_color=Palette.SURFACE_ALT
         ).pack(side="left")
 
     # ------------------------------------------------------------------ synchro
@@ -123,7 +151,9 @@ class StudentsPanel(Panel):
             self._list.grid()
         else:
             self._list.grid_remove()
-            self._empty.grid(row=1, column=0, sticky="nsew", pady=Metrics.PAD_XL)
+            self._empty.grid(
+                row=ROW_BODY, column=COLUMN_LIST, sticky="nsew", pady=Metrics.PAD_XL
+            )
 
     def _matches(self, name: str) -> bool:
         return self._filter in name.casefold()
@@ -158,7 +188,11 @@ class StudentsPanel(Panel):
             self._inspector.grid_remove()
         else:
             self._inspector.grid(
-                row=1, column=1, sticky="nsew", padx=Metrics.PAD_SM, pady=(0, Metrics.PAD_SM)
+                row=ROW_BODY,
+                column=COLUMN_INSPECTOR,
+                sticky="nsew",
+                padx=Metrics.PAD_SM,
+                pady=(0, Metrics.PAD_SM),
             )
         self._apply_visual_state()
 
@@ -169,21 +203,21 @@ class StudentsPanel(Panel):
         self._filter = self._search.get().strip().casefold()
         self._layout_tiles(self._session.students)
 
-    def _add_students(self) -> None:
-        raw = TextPromptDialog(
-            self,
-            "Ajouter des élèves",
-            "Nom de l'élève",
-            placeholder="Alice, Bob, Carole…",
-            detail="Plusieurs noms peuvent être saisis d'un coup, séparés par des virgules.",
-            validator=lambda value: None if value.strip() else "Saisissez au moins un nom.",
-        ).show()
-        if not raw:
-            return
+    def _toggle_composer(self) -> None:
+        self._composer.toggle()
 
-        _, problems = self._session.add_students(_split_names(raw))
-        if problems:
-            NoticeDialog.inform(self, "Certains élèves n'ont pas été ajoutés", "\n".join(problems))
+    def _submit_students(self, raw: str) -> str | None:
+        """Ajoute les noms saisis ; ne garde dans le champ que ceux qui ont été refusés."""
+        added, rejected = self._session.add_students(_split_names(raw))
+        if not rejected:
+            return None
+
+        self._composer.set_text(", ".join(name for name, _reason in rejected))
+        reasons = list(dict.fromkeys(reason for _name, reason in rejected))
+        if added:
+            plural = "s" if len(added) > 1 else ""
+            reasons.insert(0, f"{len(added)} élève{plural} ajouté{plural}.")
+        return " ".join(reasons)
 
 
 def _split_names(raw: str) -> list[str]:

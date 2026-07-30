@@ -109,18 +109,23 @@ class SessionState:
         self.students_changed.emit()
         return student
 
-    def add_students(self, names: list[str]) -> tuple[list[StudentModel], list[str]]:
-        """Ajout en lot : renvoie (élèves ajoutés, messages de refus) sans tout annuler."""
+    def add_students(self, names: list[str]) -> tuple[list[StudentModel], list[tuple[str, str]]]:
+        """Ajout en lot, sans tout annuler en cas de refus partiel.
+
+        Renvoie les élèves ajoutés et les refus sous forme de couples (nom, raison) :
+        la saisie en place s'en sert pour ne laisser dans le champ que les noms à
+        corriger.
+        """
         added: list[StudentModel] = []
-        problems: list[str] = []
+        rejected: list[tuple[str, str]] = []
         for name in names:
             try:
                 student = self.add_student(name)
             except SessionError as error:
-                problems.append(str(error))
+                rejected.append((name, str(error)))
             else:
                 added.append(student)
-        return added, problems
+        return added, rejected
 
     def rename_student(self, student_id: str, name: str) -> None:
         student = self._require_student(student_id)
