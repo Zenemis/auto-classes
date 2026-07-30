@@ -14,34 +14,43 @@ Color = tuple[str, str]
 
 
 class Palette:
-    """Gris neutres légèrement chauds, un vert pour l'action principale,
-    et une couleur par type de contrainte."""
+    """Gris froids, le vert-canard de Pronote pour l'action principale,
+    et une couleur par type de contrainte.
 
-    WINDOW: Color = ("#F1F1EF", "#191918")
-    SURFACE: Color = ("#FFFFFF", "#242423")
-    SURFACE_ALT: Color = ("#E9E9E5", "#2C2C2B")
-    SURFACE_SUNKEN: Color = ("#E5E5E1", "#1F1F1E")
-    HOVER: Color = ("#E2E2DD", "#333332")
-    BORDER: Color = ("#DBDBD5", "#383836")
-    BORDER_STRONG: Color = ("#C2C2BA", "#4A4A47")
+    Les deux teintes de marque sont relevées sur `assets/pronote-icon.png` :
+    vert-canard `#018673` et jaune `#FECD06`.
+    """
 
-    TEXT: Color = ("#1D1D1B", "#ECECEA")
-    TEXT_MUTED: Color = ("#6F6F68", "#9C9C95")
-    TEXT_FAINT: Color = ("#9A9A92", "#71716B")
+    BRAND: Color = ("#018673", "#018673")
+    BRAND_YELLOW: Color = ("#FECD06", "#FECD06")
+
+    WINDOW: Color = ("#EFF1F3", "#171A1B")
+    SURFACE: Color = ("#FFFFFF", "#212527")
+    SURFACE_ALT: Color = ("#E7EBEE", "#282D2F")
+    SURFACE_SUNKEN: Color = ("#E1E6EA", "#1C2021")
+    HOVER: Color = ("#DEE4E9", "#2F3538")
+    BORDER: Color = ("#D6DDE2", "#343A3D")
+    BORDER_STRONG: Color = ("#B8C3CA", "#464D51")
+
+    TEXT: Color = ("#1B2124", "#E9ECED")
+    TEXT_MUTED: Color = ("#636E77", "#98A2A8")
+    TEXT_FAINT: Color = ("#909DA6", "#6D767B")
     TEXT_ON_ACCENT: Color = ("#FFFFFF", "#FFFFFF")
 
-    PRIMARY: Color = ("#1B9E57", "#21A25E")
-    PRIMARY_HOVER: Color = ("#17864A", "#1A8B50")
+    PRIMARY: Color = ("#018673", "#0A9C87")
+    PRIMARY_HOVER: Color = ("#016B5C", "#018673")
 
-    SELECTION: Color = ("#5C6B8A", "#8497BE")
-    SELECTION_BG: Color = ("#E9EBF1", "#2E323C")
+    SELECTION: Color = ("#2E7D8F", "#57A5B4")
+    SELECTION_BG: Color = ("#E1EDF1", "#22333A")
 
     DANGER: Color = ("#C2483B", "#D8695A")
     DANGER_HOVER: Color = ("#A83A2F", "#C25546")
 
-    TOGETHER: Color = ("#3C74C4", "#6C9BE0")
+    TOGETHER: Color = ("#2C6FB5", "#6199DE")
     APART: Color = ("#C2483B", "#D8695A")
-    INCLUDE: Color = ("#2C8474", "#3FA592")
+    # Volontairement pas vert : la couleur « inclus » ne doit pas se confondre avec le
+    # vert-canard de l'action principale, notamment sur les pastilles d'option.
+    INCLUDE: Color = ("#6152B5", "#9186DC")
     EXCLUDE: Color = ("#B0731A", "#D2932F")
 
 
@@ -54,9 +63,9 @@ class Metrics:
     PAD_LG = 16
     PAD_XL = 24
 
-    RADIUS_SM = 8
-    RADIUS_MD = 12
-    RADIUS_PILL = 11
+    RADIUS_SM = 10
+    RADIUS_MD = 14
+    RADIUS_PILL = 12
 
     CONTROL_HEIGHT = 32
     ICON_BUTTON_SIZE = 30
