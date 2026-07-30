@@ -72,12 +72,19 @@ class Metrics:
 
     MENU_BAND_HEIGHT = 62
     CLASSES_BAND_HEIGHT = 232
+    # La bande s'agrandit le temps d'une édition : réserver en permanence la hauteur du
+    # formulaire laisserait une large bande vide le reste du temps.
+    CLASSES_BAND_EDITING_HEIGHT = 324
     INSPECTOR_WIDTH = 336
     PROPOSAL_LIST_WIDTH = 232
     # Une carte de classe fixe sa hauteur : sans cela elle réclamerait la hauteur par
     # défaut d'un CTkFrame (200) et se ferait rogner dans la bande.
     CLASSROOM_CARD_WIDTH = 208
     CLASSROOM_CARD_HEIGHT = 132
+    # L'éditeur remplace la carte sur place : plus large et plus haut, pour loger le
+    # formulaire (nom, effectif, options, suppression).
+    CLASSROOM_EDITOR_WIDTH = 430
+    CLASSROOM_EDITOR_HEIGHT = 228
     # Tuiles d'élève étroites : une classe entière (100 élèves et plus) doit tenir à
     # l'écran sans défilement interminable. Hauteur fixée pour une grille régulière.
     STUDENT_TILE_WIDTH = 108

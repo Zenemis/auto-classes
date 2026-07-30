@@ -45,7 +45,7 @@ class StudentTile(ClickableCard):
         # centrerait son nom verticalement alors que les autres l'alignent en haut.
         self.grid_rowconfigure(1, weight=1)
 
-        self._name = EllipsizedLabel(
+        self._name_label = EllipsizedLabel(
             self,
             text=student.name,
             font=Fonts.body_bold(),
@@ -55,7 +55,7 @@ class StudentTile(ClickableCard):
             width_source=self,
             width_margin=2 * Metrics.PAD_SM + 4,
         )
-        self._name.grid(row=0, column=0, sticky="ew", padx=Metrics.PAD_SM, pady=(Metrics.PAD_SM, 0))
+        self._name_label.grid(row=0, column=0, sticky="ew", padx=Metrics.PAD_SM, pady=(Metrics.PAD_SM, 0))
 
         self._badges = Group(self)
         self._badges.grid(row=1, column=0, sticky="ew", padx=Metrics.PAD_SM, pady=(0, Metrics.PAD_SM))
@@ -68,7 +68,7 @@ class StudentTile(ClickableCard):
         super().set_accent(accent, filled=filled)
         # Le nom reprend la couleur de l'outil quand la contrainte est déjà posée :
         # la bordure seule se remarque mal sur une tuile de cette taille.
-        self._name.configure(
+        self._name_label.configure(
             text_color=accent if accent is not None and filled else Palette.TEXT
         )
 
@@ -77,7 +77,7 @@ class StudentTile(ClickableCard):
         if student is None:
             return
 
-        self._name.set_text(student.name)
+        self._name_label.set_text(student.name)
         for child in self._badges.winfo_children():
             child.destroy()
 

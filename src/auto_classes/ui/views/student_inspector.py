@@ -74,10 +74,10 @@ class StudentInspector(Panel):
         header.grid(row=0, column=0, sticky="ew", padx=Metrics.PAD_MD, pady=(Metrics.PAD_MD, 0))
         header.grid_columnconfigure(0, weight=1)
 
-        self._name = ctk.CTkLabel(
+        self._name_label = ctk.CTkLabel(
             header, text="", font=Fonts.heading(), text_color=Palette.TEXT, anchor="w"
         )
-        self._name.grid(row=0, column=0, sticky="ew")
+        self._name_label.grid(row=0, column=0, sticky="ew")
 
         # Libellé plutôt qu'un crayon : aucun glyphe de crayon ne se dessine proprement
         # à cette taille dans les polices système.
@@ -144,7 +144,7 @@ class StudentInspector(Panel):
         if student is None:
             return
 
-        self._name.configure(text=student.name)
+        self._name_label.configure(text=student.name)
 
         active = self._interaction.active_tool
         for tool, button in self._tools.items():
@@ -167,7 +167,7 @@ class StudentInspector(Panel):
     def _refresh_hint(self, active: Tool | None) -> None:
         if active is None:
             self._hint.configure(
-                text="Choisissez un outil, puis désignez l'élève ou le tag concerné."
+                text="Choisissez un outil, puis désignez l'élève ou l'option concernée."
             )
         else:
             self._hint.configure(text=active.hint)
@@ -185,7 +185,7 @@ class StudentInspector(Panel):
         if not tags:
             ctk.CTkLabel(
                 self._tag_chooser,
-                text="Aucun tag disponible : ajoutez-en dans la bande « Classes ».",
+                text="Aucune option disponible : ajoutez-en dans la bande « Classes ».",
                 font=Fonts.small(),
                 text_color=Palette.TEXT_FAINT,
                 anchor="w",

@@ -104,8 +104,8 @@ class TagRuleKind(Enum):
 
     def describe(self, tag: str) -> str:
         if self is TagRuleKind.INCLUDE:
-            return f"Doit avoir « {tag} »"
-        return f"Jamais « {tag} »"
+            return f"Doit avoir l'option « {tag} »"
+        return f"Jamais l'option « {tag} »"
 
 
 @dataclass

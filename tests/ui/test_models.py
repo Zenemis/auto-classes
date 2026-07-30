@@ -88,5 +88,6 @@ def test_elide_de(name, expected):
 
 
 def test_tag_rule_kind_describes_in_french():
-    assert TagRuleKind.INCLUDE.describe("latin") == "Doit avoir « latin »"
-    assert TagRuleKind.EXCLUDE.describe("latin") == "Jamais « latin »"
+    """Côté enseignant on parle d'« option », le mot « tag » reste au backend."""
+    assert TagRuleKind.INCLUDE.describe("latin") == "Doit avoir l'option « latin »"
+    assert TagRuleKind.EXCLUDE.describe("latin") == "Jamais l'option « latin »"

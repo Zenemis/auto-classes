@@ -272,7 +272,7 @@ class SessionState:
         student = self._require_student(student_id)
         clean_tag = tag.strip()
         if not clean_tag:
-            raise SessionError("Le tag ne peut pas être vide.")
+            raise SessionError("L'option ne peut pas être vide.")
 
         existing = self.tag_rule_for(student.id, clean_tag)
         if existing is not None:
@@ -343,7 +343,9 @@ class SessionState:
         )
         if unknown_tags:
             problems.append(
-                "Aucune classe ne porte le tag " + ", ".join(f"« {tag} »" for tag in unknown_tags) + "."
+                "Aucune classe ne porte l'option "
+                + ", ".join(f"« {tag} »" for tag in unknown_tags)
+                + "."
             )
 
         return problems

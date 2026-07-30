@@ -1,4 +1,4 @@
-"""Étiquettes compactes : tags de classe et contraintes d'un élève."""
+"""Étiquettes compactes : options de classe et contraintes d'un élève."""
 
 from collections.abc import Callable
 
@@ -22,7 +22,7 @@ TAG_RULE_COLORS: dict[TagRuleKind, Color] = {
 
 
 class TagPill(ctk.CTkFrame):
-    """Tag de classe. Cliquable (choix d'un tag) et/ou supprimable (édition d'une classe).
+    """Option de classe. Cliquable (choix d'une option) et/ou supprimable (édition d'une classe).
 
     `outlined` sert aux tags proposés mais pas encore posés : pleine, la pastille dit
     « contrainte active, un clic la retire » ; en contour, « un clic la pose ».
