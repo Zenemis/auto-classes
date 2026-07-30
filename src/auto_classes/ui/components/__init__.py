@@ -22,6 +22,7 @@ from auto_classes.ui.components.dialogs import (
     TextPromptDialog,
 )
 from auto_classes.ui.components.flow_grid import FlowGrid
+from auto_classes.ui.components.labels import EllipsizedLabel
 from auto_classes.ui.components.surfaces import (
     ClickableCard,
     EmptyState,
@@ -49,6 +50,7 @@ __all__ = [
     "ConfirmDialog",
     "NoticeDialog",
     "FlowGrid",
+    "EllipsizedLabel",
     "Group",
     "Panel",
     "ScrollArea",

@@ -20,6 +20,8 @@ DEMO_STUDENTS = (
     "Jonas",
     "Karim",
     "Léa",
+    # Nom volontairement long : vérifie la troncature des tuiles à l'œil nu.
+    "Marie-Charlotte Vandenbrouck",
 )
 
 

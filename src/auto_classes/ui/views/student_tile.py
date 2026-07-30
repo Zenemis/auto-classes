@@ -1,19 +1,22 @@
-"""Tuile d'un élève dans la liste : nom, compteurs de contraintes, états visuels."""
+"""Tuile d'un élève dans la liste : nom tronqué, pastilles de contraintes, états visuels."""
 
 from collections.abc import Callable
 
-import customtkinter as ctk
 import tkinter as tk
 
-from auto_classes.ui.components import ClickableCard, CountBadge, Group
+from auto_classes.ui.components import ClickableCard, CountBadge, EllipsizedLabel, Group
 from auto_classes.ui.components.chips import RELATION_COLORS, TAG_RULE_COLORS
 from auto_classes.ui.models import RelationKind, StudentModel, TagRuleKind
 from auto_classes.ui.session import SessionState
-from auto_classes.ui.theme import Fonts, Metrics, Palette
+from auto_classes.ui.theme import Color, Fonts, Metrics, Palette
 
 
 class StudentTile(ClickableCard):
     """Une tuile par élève, réutilisée d'un rafraîchissement à l'autre.
+
+    Étroite à dessein : une classe de plus de cent élèves doit rester lisible d'un
+    coup d'œil. Le nom est donc tronqué, et les contraintes réduites à une pastille
+    colorée par type — le détail chiffré vit dans l'inspecteur.
 
     Reconstruire toutes les tuiles à chaque ajout de contrainte serait perceptible sur
     une centaine d'élèves : `refresh` remet à jour le contenu sans recréer le widget.
@@ -26,21 +29,38 @@ class StudentTile(ClickableCard):
         session: SessionState,
         on_click: Callable[[str], None],
     ) -> None:
-        super().__init__(master, on_click=lambda: on_click(student.id))
+        super().__init__(
+            master,
+            on_click=lambda: on_click(student.id),
+            width=Metrics.STUDENT_TILE_WIDTH,
+            height=Metrics.STUDENT_TILE_HEIGHT,
+        )
 
         self.student_id = student.id
         self._session = session
-        self.grid_columnconfigure(0, weight=1)
 
-        self._name = ctk.CTkLabel(
-            self, text=student.name, font=Fonts.body_bold(), text_color=Palette.TEXT, anchor="w"
+        self.grid_propagate(False)
+        self.grid_columnconfigure(0, weight=1)
+        # La ligne des pastilles absorbe le vide : sans cela, une tuile sans contrainte
+        # centrerait son nom verticalement alors que les autres l'alignent en haut.
+        self.grid_rowconfigure(1, weight=1)
+
+        self._name = EllipsizedLabel(
+            self,
+            text=student.name,
+            font=Fonts.body_bold(),
+            text_color=Palette.TEXT,
+            anchor="w",
+            # La largeur utile est celle de la tuile, moins ses marges gauche et droite.
+            width_source=self,
+            width_margin=2 * Metrics.PAD_SM + 4,
         )
-        self._name.grid(row=0, column=0, sticky="ew", padx=Metrics.PAD_MD, pady=(Metrics.PAD_SM, 0))
+        self._name.grid(row=0, column=0, sticky="ew", padx=Metrics.PAD_SM, pady=(Metrics.PAD_SM, 0))
 
         self._badges = Group(self)
-        self._badges.grid(row=1, column=0, sticky="ew", padx=Metrics.PAD_MD, pady=(2, Metrics.PAD_SM))
+        self._badges.grid(row=1, column=0, sticky="ew", padx=Metrics.PAD_SM, pady=(0, Metrics.PAD_SM))
 
-        # Bindings d'abord, contenu ensuite : `refresh` ne rebinde que la zone des badges.
+        # Bindings d'abord, contenu ensuite : `refresh` ne rebinde que la zone des pastilles.
         self.activate()
         self.refresh()
 
@@ -49,11 +69,19 @@ class StudentTile(ClickableCard):
         if student is None:
             return
 
-        self._name.configure(text=student.name)
+        self._name.set_text(student.name)
         for child in self._badges.winfo_children():
             child.destroy()
 
-        counts: list[tuple[int, object]] = []
+        for count, accent in self._badge_counts():
+            CountBadge(self._badges, count, accent).pack(side="left", padx=(0, Metrics.PAD_XS))
+
+        self.activate(self._badges)
+
+    def _badge_counts(self) -> list[tuple[int, Color]]:
+        """Une pastille par type de contrainte présent, dans un ordre stable."""
+        counts: list[tuple[int, Color]] = []
+
         relations = self._session.relations_of(self.student_id)
         for kind in RelationKind:
             total = sum(1 for relation in relations if relation.kind is kind)
@@ -66,17 +94,4 @@ class StudentTile(ClickableCard):
             if total:
                 counts.append((total, TAG_RULE_COLORS[tag_kind]))
 
-        if not counts:
-            ctk.CTkLabel(
-                self._badges,
-                text="Aucune contrainte",
-                font=Fonts.small(),
-                text_color=Palette.TEXT_FAINT,
-            ).pack(side="left")
-        else:
-            for total, accent in counts:
-                CountBadge(self._badges, total, accent).pack(  # type: ignore[arg-type]
-                    side="left", padx=(0, Metrics.PAD_SM)
-                )
-
-        self.activate(self._badges)
+        return counts

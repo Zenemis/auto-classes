@@ -43,22 +43,22 @@ def test_recolored_does_not_touch_the_cached_source():
     assert source.getpixel((0, 0))[3] == 0  # coin resté transparent
 
 
-def test_icon_needs_a_tk_root(tk_root):
+def test_icon_builds_without_a_tk_root():
     image = assets.icon(assets.IMPORT_ICON, size=18, tint=("#000000", "#FFFFFF"))
     assert image.cget("size") == (18, 18)
 
 
-def test_icon_without_tint_uses_the_same_image_for_both_themes(tk_root):
+def test_icon_without_tint_uses_the_same_image_for_both_themes():
     image = assets.icon(assets.PRONOTE_ICON, size=20)
     assert image.cget("light_image") is image.cget("dark_image")
 
 
-def test_icon_with_tint_differs_between_themes(tk_root):
+def test_icon_with_tint_differs_between_themes():
     image = assets.icon(assets.IMPORT_ICON, size=20, tint=("#000000", "#FFFFFF"))
     assert image.cget("light_image") is not image.cget("dark_image")
 
 
-def test_icon_is_not_recycled_between_calls(tk_root):
+def test_icon_is_not_recycled_between_calls():
     """Chaque appel doit rendre une CTkImage neuve : elles sont liées à une racine Tk."""
     first = assets.icon(assets.PRONOTE_ICON, size=18)
     second = assets.icon(assets.PRONOTE_ICON, size=18)

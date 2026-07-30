@@ -106,12 +106,16 @@ class ConstraintChip(ctk.CTkFrame):
 
 
 class CountBadge(ctk.CTkLabel):
-    """Compteur coloré affiché sur une tuile d'élève (« ● 2 » contraintes de ce type)."""
+    """Pastille colorée signalant les contraintes d'un type sur une tuile d'élève.
+
+    Le nombre n'est affiché qu'à partir de deux : sur une tuile étroite, « ● » suffit à
+    dire « il y en a une », et quatre pastilles chiffrées ne tiendraient pas.
+    """
 
     def __init__(self, master: tk.Misc, count: int, accent: Color) -> None:
         super().__init__(
             master,
-            text=f"{Icons.DOT} {count}",
+            text=Icons.DOT if count < 2 else f"{Icons.DOT}{count}",
             font=Fonts.small_bold(),
             text_color=accent,
         )

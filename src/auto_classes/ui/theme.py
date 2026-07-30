@@ -78,7 +78,10 @@ class Metrics:
     # défaut d'un CTkFrame (200) et se ferait rogner dans la bande.
     CLASSROOM_CARD_WIDTH = 208
     CLASSROOM_CARD_HEIGHT = 132
-    STUDENT_TILE_WIDTH = 216
+    # Tuiles d'élève étroites : une classe entière (100 élèves et plus) doit tenir à
+    # l'écran sans défilement interminable. Hauteur fixée pour une grille régulière.
+    STUDENT_TILE_WIDTH = 108
+    STUDENT_TILE_HEIGHT = 54
 
 
 class Fonts:
