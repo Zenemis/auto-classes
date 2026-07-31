@@ -6,8 +6,6 @@ chaque `configure`. Une carte qui garde son pourtour après désélection signal
 qu'un attribut de la classe masque à nouveau celui du widget.
 """
 
-import tkinter as tk
-
 import customtkinter as ctk
 import pytest
 
@@ -15,22 +13,9 @@ from auto_classes.ui.components.surfaces import ClickableCard
 from auto_classes.ui.theme import Palette
 
 
-@pytest.fixture(scope="module")
-def window():
-    try:
-        root = ctk.CTk()
-    except tk.TclError as error:
-        pytest.skip(f"pas d'affichage disponible : {error}")
-    root.withdraw()
-    try:
-        yield root
-    finally:
-        root.destroy()
-
-
 @pytest.fixture
-def card(window):
-    widget = ClickableCard(window)
+def card(root):
+    widget = ClickableCard(root)
     yield widget
     widget.destroy()
 
@@ -94,9 +79,9 @@ def test_selection_changes_the_fill_too(card):
     assert card.cget("fg_color") == Palette.SURFACE
 
 
-def test_a_custom_idle_border_is_preserved(window):
+def test_a_custom_idle_border_is_preserved(root):
     """Une carte peut naître avec sa propre bordure : elle doit y revenir."""
-    widget = ClickableCard(window, border_color=Palette.BORDER_STRONG)
+    widget = ClickableCard(root, border_color=Palette.BORDER_STRONG)
     widget.set_selected(True)
     widget.set_selected(False)
     assert widget.cget("border_color") == Palette.BORDER_STRONG

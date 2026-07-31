@@ -1,6 +1,6 @@
 """Briques d'interface réutilisables, sans connaissance du modèle de session."""
 
-from auto_classes.ui.components.bindings import bind_recursive, set_cursor_recursive
+from auto_classes.ui.components.bindings import bind_recursive, contains_widget, set_cursor_recursive
 from auto_classes.ui.components.buttons import (
     DangerButton,
     GhostButton,
@@ -35,6 +35,7 @@ from auto_classes.ui.components.surfaces import (
 
 __all__ = [
     "bind_recursive",
+    "contains_widget",
     "set_cursor_recursive",
     "GhostButton",
     "PrimaryButton",

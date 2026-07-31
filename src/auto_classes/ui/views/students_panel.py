@@ -16,6 +16,7 @@ from auto_classes.ui.components import (
     NoticeDialog,
     Panel,
     SectionHeader,
+    contains_widget,
 )
 from auto_classes.ui.interaction import InteractionState
 from auto_classes.ui.session import SessionError, SessionState
@@ -88,6 +89,25 @@ class StudentsPanel(Panel):
         session.constraints_changed.connect(self._refresh_tiles)
         interaction.selection_changed.connect(self._on_selection_changed)
         interaction.tool_changed.connect(self._on_tool_changed)
+
+        # `bind_all` est global à toute l'application, pas seulement à cette bande :
+        # avec 100+ élèves la liste n'a plus un pixel de fond visible pour cliquer
+        # dessus, donc le clic « ailleurs » doit fonctionner depuis n'importe où dans
+        # la fenêtre — menu, bande des classes, onglet Propositions. CustomTkinter
+        # interdit `bind_all` sur ses propres widgets (« pourrait avoir un effet
+        # indéfini ») ; on passe donc par l'implémentation Tk d'origine, que CTk
+        # n'utilise lui-même que pour la molette et les touches Maj — jamais pour
+        # `<Button-1>`, donc sans risque de collision avec son fonctionnement interne.
+        #
+        # `bind_all` vit au niveau de l'application, pas du widget : sans le retirer
+        # explicitement à la destruction, il survivrait à cette bande et planterait au
+        # clic suivant en essayant d'interroger un widget qui n'existe plus. Une seule
+        # bande « Élèves » existe jamais à la fois, donc tout retirer pour la séquence
+        # à la destruction ne perd rien.
+        tk.Misc.bind_all(self, "<Button-1>", self._on_window_click, add="+")
+        tk.Misc.bind(
+            self, "<Destroy>", lambda _event: tk.Misc.unbind_all(self, "<Button-1>"), add="+"
+        )
 
         self._sync_tiles()
 
@@ -184,7 +204,14 @@ class StudentsPanel(Panel):
         tool = self._interaction.active_tool
         selected = self._interaction.selected_student_id
 
-        if tool is not None and tool.targets_students and selected is not None and selected != student_id:
+        if selected == student_id:
+            # Recliquer sur l'élève déjà sélectionné le désélectionne (et désarme
+            # l'outil au passage) : cliquer sa propre tuile n'a de toute façon aucun
+            # sens pour un outil, qui vise toujours un *autre* élève ou une option.
+            self._interaction.clear_selection()
+            return
+
+        if tool is not None and tool.targets_students and selected is not None:
             # Un clic pose la contrainte, un second la retire.
             try:
                 self._session.toggle_relation(tool.relation_kind, selected, student_id)
@@ -193,6 +220,36 @@ class StudentsPanel(Panel):
             return  # l'outil reste armé : plusieurs contraintes s'enchaînent
 
         self._interaction.select_student(student_id)
+
+    def _on_window_click(self, event: tk.Event) -> None:
+        """Un clic n'importe où hors des zones actives désélectionne (et désarme
+        l'outil au passage, via `clear_selection`).
+
+        « Zones actives » : chaque tuile (elle gère déjà son propre clic — la laisser
+        aussi désélectionner bousculerait sélection et bascule d'outil sur le même
+        clic), l'ascenseur de la liste (faire défiler 100+ élèves ne doit pas vider la
+        sélection), l'inspecteur (lire une contrainte ou armer un outil n'est pas
+        « cliquer ailleurs »), le composeur et l'en-tête (recherche, « + »). Le fond
+        vide de la liste elle-même n'est PAS exclu : avec 100+ élèves il ne reste
+        plus grand-chose à voir, mais ce qui en reste doit continuer à désélectionner.
+        Tout le reste de la fenêtre — bande des classes, menu, onglet Propositions —
+        désélectionne aussi.
+        """
+        toplevel = event.widget.winfo_toplevel()
+        if toplevel is not self.winfo_toplevel():
+            return  # une fenêtre modale (renommer, confirmer…) a le clic : ne pas y toucher
+
+        managed_areas = (
+            self._inspector,
+            self._composer,
+            self._header,
+            self._list._scrollbar,
+            *self._tiles.values(),
+        )
+        if any(contains_widget(area, event.widget) for area in managed_areas):
+            return
+
+        self._interaction.clear_selection()
 
     def _on_selection_changed(self, student_id: str | None) -> None:
         if student_id is None:

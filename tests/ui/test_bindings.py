@@ -15,29 +15,10 @@ from auto_classes.ui.components.bindings import bind_recursive
 SEQUENCE = "<Button-1>"
 
 
-@pytest.fixture(scope="module")
-def window():
-    """Une seule racine Tk pour tout le module.
-
-    CustomTkinter garde un état global (suivi de l'échelle, du thème) que la création
-    répétée de racines dans un même processus met en défaut — d'où une racine unique,
-    et des widgets neufs à chaque test.
-    """
-    try:
-        root = ctk.CTk()
-    except tk.TclError as error:
-        pytest.skip(f"pas d'affichage disponible : {error}")
-    root.withdraw()
-    try:
-        yield root
-    finally:
-        root.destroy()
-
-
 @pytest.fixture
-def root(window):
-    """Conteneur vierge par test, sous la racine partagée."""
-    holder = ctk.CTkFrame(window)
+def container(root):
+    """Conteneur vierge par test, sous la racine partagée (`conftest.py`)."""
+    holder = ctk.CTkFrame(root)
     yield holder
     holder.destroy()
 
@@ -51,15 +32,15 @@ def noop(_event: tk.Event) -> None:
     pass
 
 
-def test_frame_is_bound_once(root):
-    frame = ctk.CTkFrame(root)
+def test_frame_is_bound_once(container):
+    frame = ctk.CTkFrame(container)
     bind_recursive(frame, SEQUENCE, noop)
     assert handlers(frame._canvas) == 1
 
 
-def test_label_internals_are_bound_once_each(root):
+def test_label_internals_are_bound_once_each(container):
     """Le piège : CTkLabel relaie déjà `bind`, tout en exposant ses parties."""
-    frame = ctk.CTkFrame(root)
+    frame = ctk.CTkFrame(container)
     label = ctk.CTkLabel(frame, text="Alice")
     label.pack()
 
@@ -69,8 +50,8 @@ def test_label_internals_are_bound_once_each(root):
     assert handlers(label._label) == 1
 
 
-def test_nested_frames_are_all_reached(root):
-    outer = ctk.CTkFrame(root)
+def test_nested_frames_are_all_reached(container):
+    outer = ctk.CTkFrame(container)
     inner = ctk.CTkFrame(outer)
     label = ctk.CTkLabel(inner, text="Bob")
     label.pack()
@@ -83,9 +64,9 @@ def test_nested_frames_are_all_reached(root):
     assert handlers(label._label) == 1
 
 
-def test_interactive_widgets_are_left_alone(root):
+def test_interactive_widgets_are_left_alone(container):
     """Un bouton gère ses propres clics : le rebinder déclencherait deux actions."""
-    frame = ctk.CTkFrame(root)
+    frame = ctk.CTkFrame(container)
     button = ctk.CTkButton(frame, text="Supprimer")
     entry = ctk.CTkEntry(frame)
     button.pack()
@@ -97,9 +78,9 @@ def test_interactive_widgets_are_left_alone(root):
     assert handlers(entry._entry) == 0
 
 
-def test_binding_new_children_does_not_pile_up_on_the_container(root):
+def test_binding_new_children_does_not_pile_up_on_the_container(container):
     """Rebinder les enfants recréés ne doit pas ajouter un gestionnaire au conteneur."""
-    container = ctk.CTkFrame(root)
+    container = ctk.CTkFrame(container)
     bind_recursive(container, SEQUENCE, noop)
 
     for _ in range(5):
@@ -113,9 +94,9 @@ def test_binding_new_children_does_not_pile_up_on_the_container(root):
         assert handlers(badge._label) == 1
 
 
-def test_rebinding_the_same_widget_does_pile_up(root):
+def test_rebinding_the_same_widget_does_pile_up(container):
     """Garde-fou : `add="+"` empile bel et bien, d'où la règle de ne binder qu'une fois."""
-    frame = ctk.CTkFrame(root)
+    frame = ctk.CTkFrame(container)
     bind_recursive(frame, SEQUENCE, noop)
     bind_recursive(frame, SEQUENCE, noop)
     assert handlers(frame._canvas) == 2
