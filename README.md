@@ -58,6 +58,17 @@ python -m auto_classes.ui                         # lance l'UI
 python -m auto_classes.ui --demo                  # UI avec un jeu d'essai
 ```
 
+### Mode debug de l'exécutable
+
+Le binaire se lance d'un double-clic : il n'y a pas de ligne de commande où écrire
+`--demo`. Tenir **les deux touches Ctrl** (gauche *et* droite) au démarrage a le même
+effet. Il faut les maintenir jusqu'à l'ouverture de la fenêtre : l'exécutable *onefile*
+se décompresse d'abord, et l'état du clavier n'est lu qu'au démarrage de Python.
+
+Le raccourci exige les deux Ctrl pour ne pas se déclencher sur un Ctrl+clic malencontreux
+sur le raccourci de lancement, et il ne lit que l'état *courant* des touches : un Ctrl
+relâché juste avant ne compte pas. Hors de Windows, il n'existe pas.
+
 Les tests :
 
 ```bash
