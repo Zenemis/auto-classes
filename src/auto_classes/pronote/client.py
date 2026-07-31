@@ -22,11 +22,13 @@ page à sa place évite un échec dont la cause serait invisible.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
+from auto_classes.pronote.credentials import SavedCredentials, new_uuid
 from auto_classes.pronote.errors import PronoteError
 
 # Page de connexion de l'espace Vie scolaire, le seul qui expose les listes de classes.
@@ -118,13 +120,7 @@ def available_ents() -> dict[str, Callable[..., Any]]:
 
 
 def _default_client_factory(*args: Any, **kwargs: Any) -> Any:
-    try:
-        import pronotepy
-    except ImportError as error:  # paquet absent d'une installation bricolée
-        raise PronoteError(
-            "La bibliothèque pronotepy n'est pas installée : la connexion Pronote est indisponible."
-        ) from error
-    return pronotepy.VieScolaireClient(*args, **kwargs)
+    return _pronotepy().VieScolaireClient(*args, **kwargs)
 
 
 def fetch_roster(
@@ -174,6 +170,148 @@ def fetch_roster(
     return roster
 
 
+@dataclass(frozen=True)
+class Connection:
+    """Une connexion par jeton : les classes lues, et le jeton à réécrire.
+
+    Les deux vont ensemble parce que PRONOTE renouvelle le jeton pendant la connexion :
+    séparer la lecture des classes de la récupération du nouveau jeton laisserait la
+    porte ouverte à un import réussi suivi d'un jeton perdu.
+    """
+
+    roster: Roster
+    credentials: SavedCredentials
+
+
+def parse_qr_payload(text: str) -> dict[str, str]:
+    """Contenu d'un QR code PRONOTE, tel qu'il est collé depuis un lecteur de QR code.
+
+    C'est du JSON, mais collé à la main : il traîne régulièrement des guillemets typo­
+    graphiques ou des retours à la ligne. Seule la structure est vérifiée ici — les trois
+    clés dont `pronotepy` a besoin.
+    """
+    raw = text.strip()
+    if not raw:
+        raise PronoteError("Collez le contenu du QR code affiché par PRONOTE.")
+
+    try:
+        payload = json.loads(raw)
+    except ValueError as error:
+        raise PronoteError(
+            "Ce n'est pas un contenu de QR code PRONOTE.\n\n"
+            "Attendu : le texte lu dans le QR code, de la forme "
+            '{"jeton": "…", "login": "…", "url": "…"}.'
+        ) from error
+
+    if not isinstance(payload, dict):
+        raise PronoteError("Ce n'est pas un contenu de QR code PRONOTE.")
+
+    missing = [key for key in ("jeton", "login", "url") if not payload.get(key)]
+    if missing:
+        raise PronoteError(
+            f"Contenu de QR code incomplet : il manque {', '.join(missing)}.\n\n"
+            "Recopiez la totalité du texte lu dans le QR code."
+        )
+    return {key: str(value) for key, value in payload.items()}
+
+
+def connect_with_qr_code(
+    qr_payload: str,
+    pin: str,
+    *,
+    client_factory: Callable[..., Any] | None = None,
+) -> Connection:
+    """Première connexion par QR code : échange le QR contre un jeton réutilisable.
+
+    Le QR code porte l'adresse du serveur — l'utilisateur n'a donc rien à saisir d'autre
+    que le code à quatre chiffres choisi dans PRONOTE au moment de l'afficher. C'est
+    aussi ce qui rend ce chemin insensible à l'ENT : il n'y a plus de portail à franchir.
+    """
+    payload = parse_qr_payload(qr_payload)
+    code = pin.strip()
+    if not code:
+        raise PronoteError("Renseignez le code à quatre chiffres choisi dans PRONOTE.")
+
+    factory = client_factory or _qr_code_client_factory
+    client = _connect(lambda: factory(payload, code, new_uuid()))
+    return _connection_from(client)
+
+
+def connect_with_token(
+    credentials: SavedCredentials,
+    *,
+    client_factory: Callable[..., Any] | None = None,
+) -> Connection:
+    """Reconnexion silencieuse avec le jeton enregistré au précédent import."""
+    factory = client_factory or _token_client_factory
+    client = _connect(lambda: factory(credentials))
+    return _connection_from(client)
+
+
+def _connect(login: Callable[[], Any]) -> Any:
+    try:
+        client = login()
+    except PronoteError:
+        raise
+    except Exception as error:
+        raise PronoteError(_diagnose(error)) from error
+
+    if not getattr(client, "logged_in", True):
+        raise PronoteError(EXPIRED_TOKEN)
+    return client
+
+
+def _connection_from(client: Any) -> Connection:
+    """Classes lues et jeton renouvelé, dans cet ordre : le jeton n'a de valeur que si
+    la lecture a abouti."""
+    try:
+        classes = tuple(_read_classes(client))
+    except PronoteError:
+        raise
+    except Exception as error:
+        raise PronoteError(_diagnose(error)) from error
+
+    roster = Roster(classes=classes)
+    if roster.is_empty:
+        raise PronoteError(NO_CLASS_ACCESS)
+
+    exported = client.export_credentials()
+    return Connection(
+        roster=roster,
+        credentials=SavedCredentials(
+            pronote_url=str(exported["pronote_url"]),
+            username=str(exported["username"]),
+            password=str(exported["password"]),
+            uuid=str(exported["uuid"]),
+            client_identifier=exported.get("client_identifier"),
+        ),
+    )
+
+
+def _qr_code_client_factory(payload: dict[str, str], pin: str, uuid: str) -> Any:
+    return _pronotepy().VieScolaireClient.qrcode_login(payload, pin, uuid)
+
+
+def _token_client_factory(credentials: SavedCredentials) -> Any:
+    return _pronotepy().VieScolaireClient.token_login(
+        credentials.pronote_url,
+        credentials.username,
+        credentials.password,
+        credentials.uuid,
+        client_identifier=credentials.client_identifier,
+    )
+
+
+def _pronotepy() -> Any:
+    try:
+        import pronotepy
+    except ImportError as error:  # paquet absent d'une installation bricolée
+        raise PronoteError(
+            "La bibliothèque pronotepy n'est pas installée : la connexion Pronote est indisponible."
+        ) from error
+    return pronotepy
+
+
 def _read_classes(client: Any) -> Iterable[StudentClass]:
     for student_class in getattr(client, "classes", []):
         students = tuple(_student_name(student) for student in student_class.students())
@@ -196,6 +334,12 @@ def _student_name(student: Any) -> str:
     return " ".join(part for part in parts if part) or "Élève sans nom"
 
 
+EXPIRED_TOKEN = (
+    "Le compte enregistré n'est plus reconnu par Pronote.\n\n"
+    "PRONOTE renouvelle le jeton à chaque connexion et l'invalide au bout d'un certain "
+    "temps sans usage. Refaites un QR code depuis Pronote pour réenregistrer le compte."
+)
+
 NO_CLASS_ACCESS = (
     "Ce compte ne donne accès à aucune liste de classe.\n\n"
     "L'import passe par l'espace Vie scolaire : c'est le seul que Pronote ouvre aux "
@@ -207,6 +351,14 @@ NO_CLASS_ACCESS = (
 # lorsqu'une connexion est tentée (l'application doit démarrer sans lui), et les tests
 # lèvent des exceptions homonymes sans dépendre de la bibliothèque.
 _DIAGNOSTICS: tuple[tuple[str, str], ...] = (
+    (
+        # Sous-classe de `CryptoError`, donc placée avant elle : c'est le déchiffrement
+        # du QR code qui a échoué, pas une authentification par mot de passe.
+        "QRCodeDecryptError",
+        "Code à quatre chiffres incorrect, ou QR code expiré.\n\n"
+        "Un QR code PRONOTE n'est valable que dix minutes : affichez-en un nouveau et "
+        "recollez son contenu.",
+    ),
     (
         "CryptoError",
         "Identifiant ou mot de passe refusé par Pronote.",

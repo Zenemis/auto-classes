@@ -71,9 +71,36 @@ Les élèves sont fictifs.
 
 ### Import Pronote
 
-Le bouton **Pronote** ouvre une fenêtre de connexion (adresse de l'établissement,
-identifiant, mot de passe, ENT facultatif), puis importe tous les élèves des classes
-accessibles au compte.
+Le bouton **Pronote** ouvre une fenêtre de connexion, puis importe tous les élèves des
+classes accessibles au compte. Trois chemins, du plus commode au plus laborieux :
+
+| Mode | Ce qu'il demande |
+| --- | --- |
+| **Compte enregistré** | rien — présélectionné dès qu'un compte existe |
+| **QR code** | le contenu du QR code affiché par Pronote + son code à 4 chiffres |
+| **Identifiants** | adresse, identifiant, mot de passe, ENT éventuel |
+
+**La connexion par QR code est la meilleure** et c'est celle que recommande pronotepy :
+le QR code porte l'adresse du serveur *et* un jeton d'accès, ce qui **court-circuite
+entièrement l'ENT** — plus de portail à franchir, plus de fonction ENT à deviner. Dans
+Pronote, affichez le QR code de connexion, choisissez un code à quatre chiffres, lisez le
+QR avec un téléphone et collez le texte obtenu dans la fenêtre. Le QR n'est valable que
+dix minutes.
+
+Ensuite, plus rien à saisir : le compte est enregistré et les imports suivants se font
+d'un clic.
+
+#### Ce qui est écrit sur le disque
+
+C'est la seule chose que l'application conserve entre deux lancements, et ce n'est pas un
+choix de confort : **Pronote régénère le jeton à chaque connexion**, donc un jeton non
+réécrit est mort au lancement suivant.
+
+Le fichier `%LOCALAPPDATA%\auto-classes\pronote-credentials.json` contient l'adresse,
+l'identifiant et le jeton — **en clair**. Cela vaut un mot de passe : c'est un accès aux
+listes d'élèves de l'établissement. Le profil utilisateur protège le fichier des autres
+comptes Windows, mais **pas sur un poste partagé sous un compte commun**. Le bouton
+« Oublier ce compte » l'efface.
 
 **Limite importante : un compte Professeurs ne fonctionne pas.** pronotepy ne gère que
 les espaces Élève, Parent et — partiellement — Vie scolaire, et seul l'espace **Vie
@@ -87,8 +114,9 @@ Deux détails pris en charge automatiquement :
   (`professeur.html`, `eleve.html`, ou la racine `/pronote/`) ;
 - un élève inscrit dans deux classes (groupe d'option) n'est importé qu'une fois.
 
-Les échecs sont traduits en messages actionnables : identifiants refusés, ENT, double
-authentification, serveur injoignable, compte sans accès aux classes.
+Les échecs sont traduits en messages actionnables : identifiants refusés, code de QR code
+erroné ou expiré, jeton périmé, ENT, double authentification, serveur injoignable, compte
+sans accès aux classes.
 
 ### UI
 
@@ -105,8 +133,8 @@ ui/
 ```
 
 Les vues ne se parlent jamais directement : elles écrivent dans `SessionState` /
-`InteractionState` et se rafraîchissent sur leurs signaux. Rien n'est persisté entre
-deux lancements du logiciel.
+`InteractionState` et se rafraîchissent sur leurs signaux. Rien n'est persisté entre deux
+lancements du logiciel, à la seule exception du jeton Pronote (voir *Import Pronote*).
 
 Deux onglets :
 
