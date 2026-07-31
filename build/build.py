@@ -86,6 +86,13 @@ def nuitka_command(version: str, output_dir: Path) -> list[str]:
         # customtkinter charge ses thèmes JSON et ses polices depuis son propre paquet,
         # par chemin de fichier : Nuitka ne peut pas les déduire des imports.
         "--include-package-data=customtkinter",
+        # pronotepy n'est importé qu'au moment d'une connexion, et `available_ents`
+        # parcourt `pronotepy.ent` avec `dir()` : rien de tout cela n'est visible dans un
+        # graphe d'imports, d'où l'inclusion explicite du paquet entier.
+        "--include-package=pronotepy",
+        # Le certificat racine dont `requests` a besoin pour parler en HTTPS au serveur
+        # Pronote : un fichier de données, pas un module.
+        "--include-package-data=certifi",
         # Sans quoi la compilation s'interrompt sur une question interactive (Nuitka
         # récupère au besoin le compilateur ou `dependency walker`) : intenable en CI.
         "--assume-yes-for-downloads",

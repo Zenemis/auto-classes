@@ -55,6 +55,11 @@ class ModalDialog(ctk.CTkToplevel):
         self.wait_window()
         return self._result
 
+    @property
+    def error_message(self) -> str:
+        """Message d'erreur affiché, chaîne vide s'il n'y en a pas."""
+        return str(self._error.cget("text"))
+
     def show_error(self, message: str) -> None:
         self._error.configure(text=message)
         self._error.pack(fill="x", padx=Metrics.PAD_XL, pady=(Metrics.PAD_SM, 0), before=self.footer)

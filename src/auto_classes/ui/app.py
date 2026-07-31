@@ -6,11 +6,14 @@ créés, et le seul endroit qui connaît les deux onglets à la fois.
 
 import customtkinter as ctk
 
+from auto_classes.pronote import Roster
 from auto_classes.ui.components import NoticeDialog
 from auto_classes.ui.generation import GenerationController, GenerationResult
 from auto_classes.ui.interaction import InteractionState
+from auto_classes.ui.models import StudentModel
 from auto_classes.ui.session import SessionState
 from auto_classes.ui.theme import Fonts, Metrics, Palette
+from auto_classes.ui.views.pronote_dialog import PronoteDialog
 from auto_classes.ui.views.results_tab import ResultsTab
 from auto_classes.ui.views.setup_tab import SetupTab
 
@@ -112,12 +115,33 @@ class App(ctk.CTk):
         )
 
     def _on_pronote(self) -> None:
-        # TODO: brancher la connexion Pronote.
-        NoticeDialog.inform(
-            self,
-            "Connexion Pronote",
-            "La connexion à Pronote n'est pas encore branchée.",
-        )
+        roster = PronoteDialog(self).show()
+        if roster is None:
+            return  # connexion annulée
+
+        added, rejected = self.session.add_students(roster.student_names)
+        NoticeDialog.inform(self, "Import Pronote", _import_summary(roster, added, rejected))
+
+
+def _import_summary(
+    roster: Roster, added: list[StudentModel], rejected: list[tuple[str, str]]
+) -> str:
+    """Compte rendu de l'import : ce qui est entré, et ce qui a été écarté.
+
+    Les refus viennent presque toujours de doublons (un élève déjà saisi à la main, ou
+    inscrit dans deux classes du même établissement) : ils sont comptés, pas énumérés.
+    """
+    class_names = ", ".join(student_class.name for student_class in roster.classes)
+    plural = "s" if len(added) > 1 else ""
+    lines = [
+        f"{len(added)} élève{plural} importé{plural} depuis "
+        f"{len(roster.classes)} classe{'s' if len(roster.classes) > 1 else ''} Pronote.",
+        f"\nClasses lues : {class_names}.",
+    ]
+    if rejected:
+        ignored = "s" if len(rejected) > 1 else ""
+        lines.append(f"\n{len(rejected)} nom{ignored} ignoré{ignored} (déjà dans la liste).")
+    return "\n".join(lines)
 
 
 def run(session: SessionState | None = None) -> None:

@@ -7,6 +7,7 @@ Application pour automatiser la création de classes d'élèves respectant des r
 
 - Python
 - CustomTkinter (UI)
+- pronotepy (import des élèves depuis Pronote)
 - CLI (debug)
 - Nuitka (bundling)
 
@@ -17,12 +18,34 @@ src/auto_classes/
     core/       # entités métier (Student, Classroom, ClassroomSet)
     rules/      # contraintes, y compris règles customisées
     algorithm/  # génération des répartitions (backtracking)
+    pronote/    # import des listes d'élèves depuis Pronote (pronotepy)
     serialization/
     ui/         # interface CustomTkinter
     cli/        # interface en ligne de commande pour le debug
 tests/
 build/          # scripts de bundling Nuitka
 ```
+
+### Import Pronote
+
+Le bouton **Pronote** ouvre une fenêtre de connexion (adresse de l'établissement,
+identifiant, mot de passe, ENT facultatif), puis importe tous les élèves des classes
+accessibles au compte.
+
+**Limite importante : un compte Professeurs ne fonctionne pas.** pronotepy ne gère que
+les espaces Élève, Parent et — partiellement — Vie scolaire, et seul l'espace **Vie
+scolaire** publie les listes de classes de l'établissement. Un enseignant doit donc
+obtenir un accès Vie scolaire auprès de son établissement. L'application le diagnostique
+et le dit ; elle ne peut pas le contourner.
+
+Deux détails pris en charge automatiquement :
+
+- l'adresse saisie est réécrite vers `viescolaire.html`, quelle que soit la page fournie
+  (`professeur.html`, `eleve.html`, ou la racine `/pronote/`) ;
+- un élève inscrit dans deux classes (groupe d'option) n'est importé qu'une fois.
+
+Les échecs sont traduits en messages actionnables : identifiants refusés, ENT, double
+authentification, serveur injoignable, compte sans accès aux classes.
 
 ### UI
 
