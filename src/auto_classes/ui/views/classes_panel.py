@@ -13,6 +13,8 @@ from auto_classes.ui.components import (
     ScrollArea,
     SectionHeader,
     TagPill,
+    contains_widget,
+    event_widget,
 )
 from auto_classes.ui.models import ClassroomModel
 from auto_classes.ui.session import SessionError, SessionState
@@ -111,6 +113,13 @@ class ClassesPanel(Panel):
             "Ajoutez une classe avec « + » : son nom, son effectif et ses options.",
         )
 
+        # Cliquer n'importe où dans la bande referme le formulaire ouvert — sauf sur
+        # une carte ou sur le formulaire lui-même, qui gèrent déjà leur propre clic.
+        # Bindings simples (pas `bind_all`) : contrairement à la sélection d'élève,
+        # cette désélection reste locale à la bande des classes.
+        for target in (self, self._strip, self._strip._parent_canvas):
+            target.bind("<Button-1>", self._on_background_click, add="+")
+
         session.classrooms_changed.connect(self.refresh)
         self.refresh()
 
@@ -176,6 +185,26 @@ class ClassesPanel(Panel):
                     lambda classroom_id=classroom.id: self._edit_classroom(classroom_id),
                 )
             widget.pack(side="left", padx=(0, Metrics.PAD_SM), pady=Metrics.PAD_XS, anchor="n")
+
+    def _on_background_click(self, event: tk.Event) -> None:
+        """Un clic n'importe où dans la bande, hors d'une carte ou du formulaire
+        ouvert, referme ce dernier.
+
+        Les cartes ferment ou ouvrent un formulaire *au même clic* qui les détruit :
+        un second gestionnaire (celui-ci) traitant ce même clic verrait alors
+        `event.widget` réduit à une chaîne plutôt qu'à un widget, Tk ne pouvant plus le
+        résoudre. `event_widget` filtre ce cas — bien réel, pas hypothétique : c'est
+        exactement ce qui plantait avant son ajout.
+        """
+        widget = event_widget(event)
+        if widget is None:
+            return
+
+        if any(contains_widget(child, widget) for child in self._strip.winfo_children()):
+            return  # une carte ou le formulaire ouvert : ils gèrent déjà leur propre clic
+
+        if self._editing_id is not None:
+            self._close_editor()
 
     def _can_keep_editor(self, identifiers: list[str]) -> bool:
         """Le formulaire en place ne survit que s'il porte encore sur la classe éditée.

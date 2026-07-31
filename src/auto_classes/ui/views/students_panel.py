@@ -17,6 +17,7 @@ from auto_classes.ui.components import (
     Panel,
     SectionHeader,
     contains_widget,
+    event_widget,
 )
 from auto_classes.ui.interaction import InteractionState
 from auto_classes.ui.session import SessionError, SessionState
@@ -235,7 +236,14 @@ class StudentsPanel(Panel):
         Tout le reste de la fenêtre — bande des classes, menu, onglet Propositions —
         désélectionne aussi.
         """
-        toplevel = event.widget.winfo_toplevel()
+        widget = event_widget(event)
+        if widget is None:
+            # Le widget cliqué a été détruit par son propre gestionnaire avant que
+            # celui-ci ne s'exécute (une carte qui se change en formulaire au clic,
+            # par exemple) : impossible de savoir où le clic est tombé, on ignore.
+            return
+
+        toplevel = widget.winfo_toplevel()
         if toplevel is not self.winfo_toplevel():
             return  # une fenêtre modale (renommer, confirmer…) a le clic : ne pas y toucher
 
@@ -246,7 +254,7 @@ class StudentsPanel(Panel):
             self._list._scrollbar,
             *self._tiles.values(),
         )
-        if any(contains_widget(area, event.widget) for area in managed_areas):
+        if any(contains_widget(area, widget) for area in managed_areas):
             return
 
         self._interaction.clear_selection()

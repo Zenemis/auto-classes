@@ -62,3 +62,17 @@ def contains_widget(container: tk.Misc, widget: tk.Misc | None) -> bool:
     if widget is None:
         return False
     return str(widget) == str(container) or str(widget).startswith(f"{container}.")
+
+
+def event_widget(event: tk.Event) -> tk.Misc | None:
+    """Le widget réellement ciblé par `event`, ou None si Tk n'a pas pu le résoudre.
+
+    Un gestionnaire spécifique au widget cliqué (celui d'une carte, par exemple) peut
+    détruire et reconstruire ce widget — c'est le cas quand cliquer une carte l'ouvre
+    en édition. Si un second gestionnaire pour le même clic tourne ensuite (un clic
+    global lié par `bind_all`), Tk ne peut plus retrouver l'objet Python correspondant
+    et laisse `event.widget` sous forme de chemin brut (une chaîne) plutôt qu'un
+    widget — d'où ce filtre, à appeler avant toute méthode `winfo_*`.
+    """
+    widget = event.widget
+    return None if isinstance(widget, str) else widget
