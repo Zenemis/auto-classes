@@ -47,12 +47,20 @@ class CsvImport:
 
 
 def load_students_csv(path: Path) -> CsvImport:
-    """Noms des élèves d'un CSV, sous la forme « NOM Prénom ».
+    """Noms des élèves d'un fichier CSV, sous la forme « NOM Prénom ».
 
     Même forme que l'import Pronote en ligne : un élève importé par les deux chemins
     n'apparaît ainsi qu'une fois dans la liste.
     """
-    text = _read_text(path)
+    return parse_students_csv(_read_text(path))
+
+
+def parse_students_csv(text: str) -> CsvImport:
+    """Même lecture, à partir du texte : un fichier, ou un tableau collé.
+
+    Un tableau copié depuis la page Pronote arrive dans le presse-papiers en colonnes
+    séparées par des tabulations — un CSV comme un autre, une fois le séparateur deviné.
+    """
     if not text.strip():
         raise CsvImportError("Ce fichier est vide.")
 
@@ -82,7 +90,7 @@ def load_students_csv(path: Path) -> CsvImport:
             skipped += 1
 
     if not names:
-        raise CsvImportError("Aucun élève trouvé dans ce fichier.")
+        raise CsvImportError("Aucun élève trouvé.")
     return CsvImport(names=tuple(names), skipped_rows=skipped)
 
 

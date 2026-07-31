@@ -4,6 +4,7 @@
 créés, et le seul endroit qui connaît les deux onglets à la fois.
 """
 
+import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog
 
@@ -11,6 +12,7 @@ import customtkinter as ctk
 
 from auto_classes.pronote import Roster
 from auto_classes.serialization import CsvImport, CsvImportError, load_students_csv
+from auto_classes.ui.paste_import import is_text_input, students_from_clipboard
 from auto_classes.ui.components import NoticeDialog
 from auto_classes.ui.generation import GenerationController, GenerationResult
 from auto_classes.ui.interaction import InteractionState
@@ -47,6 +49,11 @@ class App(ctk.CTk):
 
         self.generation.started.connect(self._on_generation_started)
         self.generation.finished.connect(self._on_generation_finished)
+
+        # `<Control-V>` autant que `<Control-v>` : avec la touche Maj enfoncée ou le
+        # verrouillage majuscule actif, Tk ne rapporte que la seconde forme.
+        for sequence in ("<Control-v>", "<Control-V>"):
+            self.bind(sequence, self._on_paste)
 
     # ------------------------------------------------------------------ montage
 
@@ -126,6 +133,32 @@ class App(ctk.CTk):
         added, rejected = self.session.add_students(list(imported.names))
         NoticeDialog.inform(self, "Import CSV", _csv_summary(imported, added, rejected))
 
+    def _on_paste(self, _event: tk.Event) -> None:
+        """Ctrl+V : importe un tableau Pronote collé, ou ne fait rien.
+
+        Rien de visible en cas d'échec — le presse-papiers contient presque toujours
+        autre chose qu'une liste d'élèves, et une fenêtre d'erreur à chaque Ctrl+V
+        serait pire que l'absence de raccourci.
+        """
+        if is_text_input(self.focus_get()):
+            return  # le champ de saisie colle son texte, comme d'habitude
+
+        try:
+            clipboard = self.clipboard_get()
+        except tk.TclError:
+            return  # presse-papiers vide, ou contenu non textuel (une image)
+
+        imported = students_from_clipboard(clipboard)
+        if imported is None:
+            return
+
+        added, rejected = self.session.add_students(list(imported.names))
+        NoticeDialog.inform(
+            self,
+            "Import collé",
+            _csv_summary(imported, added, rejected, source="le presse-papiers"),
+        )
+
     def _on_pronote(self) -> None:
         roster = PronoteDialog(self).show()
         if roster is None:
@@ -162,11 +195,15 @@ def _import_summary(
 
 
 def _csv_summary(
-    imported: CsvImport, added: list[StudentModel], rejected: list[tuple[str, str]]
+    imported: CsvImport,
+    added: list[StudentModel],
+    rejected: list[tuple[str, str]],
+    *,
+    source: str = "le fichier",
 ) -> str:
-    """Compte rendu de l'import CSV, refus et lignes sans identité compris."""
+    """Compte rendu d'un import tabulaire, refus et lignes sans identité compris."""
     mark = _plural(len(added))
-    lines = [f"{len(added)} élève{mark} importé{mark} depuis le fichier."]
+    lines = [f"{len(added)} élève{mark} importé{mark} depuis {source}."]
     if rejected:
         lines.append(_rejected_line(rejected))
     if imported.skipped_rows:

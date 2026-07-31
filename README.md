@@ -45,7 +45,21 @@ guillemets ; les colonnes dans n'importe quel ordre. « Prénom d'usage », vois
 Les noms sont importés sous la forme « NOM Prénom », la même que l'import Pronote en
 ligne : un élève entré par les deux chemins n'apparaît qu'une fois.
 
-Deux fichiers d'essai dans `samples/`, écrits comme un vrai export Pronote
+### Import par collage
+
+**Ctrl+V** dans la fenêtre importe un tableau copié depuis la page Pronote — le
+presse-papiers arrive en colonnes séparées par des tabulations, que le même lecteur
+traite. L'en-tête doit faire partie de la sélection copiée : sans lui, impossible de
+savoir quelle colonne porte le nom.
+
+Un collage qui n'est pas une liste d'élèves **ne dit rien** : pas de fenêtre d'erreur.
+Ctrl+V sert à mille choses, et la plupart des presse-papiers ne sont pas des tableaux
+Pronote. Seul un import réussi se manifeste. Dans un champ de saisie, Ctrl+V colle du
+texte normalement — la saisie garde la priorité sur le raccourci.
+
+### Fichiers d'essai
+
+Deux fichiers dans `samples/`, écrits comme un vrai export Pronote
 (point-virgule, ANSI Windows, fins de ligne CRLF) :
 
 | Fichier | Ce qu'il sert à voir |
