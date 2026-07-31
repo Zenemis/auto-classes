@@ -19,12 +19,41 @@ src/auto_classes/
     rules/      # contraintes, y compris règles customisées
     algorithm/  # génération des répartitions (backtracking)
     pronote/    # import des listes d'élèves depuis Pronote (pronotepy)
-    serialization/
+    serialization/  # config JSON, et lecture des listes d'élèves en CSV
     ui/         # interface CustomTkinter
     cli/        # interface en ligne de commande pour le debug
 tests/
 build/          # scripts de bundling Nuitka
 ```
+
+### Import CSV
+
+Le bouton **Importer** ouvre un fichier CSV — typiquement un export Pronote — et n'en
+lit que les colonnes **Nom** et **Prénom**. Tout le reste (date de naissance, classe,
+projet d'accompagnement, allergies) est ignoré : rien de tout cela ne sert à la
+répartition, et une partie relève de données sensibles.
+
+Si l'une des deux colonnes manque, le fichier est refusé, avec la liste des colonnes
+effectivement trouvées — sans quoi l'utilisateur ne sait pas si son fichier a été mal
+découpé ou mal nommé.
+
+Sont reconnus sans réglage : le point-virgule, la virgule et la tabulation ; l'UTF-8
+(avec ou sans BOM) et l'ANSI Windows ; les libellés en majuscules, sans accent ou entre
+guillemets ; les colonnes dans n'importe quel ordre. « Prénom d'usage », voisine de
+« Prénom » dans les exports Pronote, n'est jamais prise pour elle.
+
+Les noms sont importés sous la forme « NOM Prénom », la même que l'import Pronote en
+ligne : un élève entré par les deux chemins n'apparaît qu'une fois.
+
+Deux fichiers d'essai dans `samples/`, écrits comme un vrai export Pronote
+(point-virgule, ANSI Windows, fins de ligne CRLF) :
+
+| Fichier | Ce qu'il sert à voir |
+| --- | --- |
+| `eleves-cm2c.csv` | un import nominal : 23 élèves d'un CM2 |
+| `eleves-sans-colonne-prenom.csv` | le refus : « Prénom » absente, « Prénom d'usage » présente |
+
+Les élèves sont fictifs.
 
 ### Import Pronote
 

@@ -4,9 +4,13 @@
 créés, et le seul endroit qui connaît les deux onglets à la fois.
 """
 
+from pathlib import Path
+from tkinter import filedialog
+
 import customtkinter as ctk
 
 from auto_classes.pronote import Roster
+from auto_classes.serialization import CsvImport, CsvImportError, load_students_csv
 from auto_classes.ui.components import NoticeDialog
 from auto_classes.ui.generation import GenerationController, GenerationResult
 from auto_classes.ui.interaction import InteractionState
@@ -105,14 +109,22 @@ class App(ctk.CTk):
         self.results_tab.show_result(result)
 
     def _on_import(self) -> None:
-        # TODO: brancher l'import d'une liste d'élèves (CSV / tableur).
-        NoticeDialog.inform(
-            self,
-            "Importer une liste",
-            "L'import de liste d'élèves n'est pas encore branché.\n\n"
-            "En attendant, utilisez le « + » de la bande Élèves : plusieurs noms peuvent "
-            "être saisis d'un coup, séparés par des virgules.",
+        path = filedialog.askopenfilename(
+            parent=self,
+            title="Importer une liste d'élèves",
+            filetypes=[("Fichiers CSV", "*.csv"), ("Tous les fichiers", "*.*")],
         )
+        if not path:
+            return  # sélection annulée
+
+        try:
+            imported = load_students_csv(Path(path))
+        except CsvImportError as error:
+            NoticeDialog.inform(self, "Import impossible", str(error))
+            return
+
+        added, rejected = self.session.add_students(list(imported.names))
+        NoticeDialog.inform(self, "Import CSV", _csv_summary(imported, added, rejected))
 
     def _on_pronote(self) -> None:
         roster = PronoteDialog(self).show()
@@ -123,24 +135,46 @@ class App(ctk.CTk):
         NoticeDialog.inform(self, "Import Pronote", _import_summary(roster, added, rejected))
 
 
+def _plural(count: int) -> str:
+    return "s" if count > 1 else ""
+
+
+def _rejected_line(rejected: list[tuple[str, str]]) -> str:
+    """Les refus viennent presque toujours de doublons : comptés, pas énumérés."""
+    mark = _plural(len(rejected))
+    return f"\n{len(rejected)} nom{mark} ignoré{mark} (déjà dans la liste)."
+
+
 def _import_summary(
     roster: Roster, added: list[StudentModel], rejected: list[tuple[str, str]]
 ) -> str:
-    """Compte rendu de l'import : ce qui est entré, et ce qui a été écarté.
-
-    Les refus viennent presque toujours de doublons (un élève déjà saisi à la main, ou
-    inscrit dans deux classes du même établissement) : ils sont comptés, pas énumérés.
-    """
+    """Compte rendu de l'import Pronote : ce qui est entré, et ce qui a été écarté."""
     class_names = ", ".join(student_class.name for student_class in roster.classes)
-    plural = "s" if len(added) > 1 else ""
+    mark = _plural(len(added))
     lines = [
-        f"{len(added)} élève{plural} importé{plural} depuis "
-        f"{len(roster.classes)} classe{'s' if len(roster.classes) > 1 else ''} Pronote.",
+        f"{len(added)} élève{mark} importé{mark} depuis "
+        f"{len(roster.classes)} classe{_plural(len(roster.classes))} Pronote.",
         f"\nClasses lues : {class_names}.",
     ]
     if rejected:
-        ignored = "s" if len(rejected) > 1 else ""
-        lines.append(f"\n{len(rejected)} nom{ignored} ignoré{ignored} (déjà dans la liste).")
+        lines.append(_rejected_line(rejected))
+    return "\n".join(lines)
+
+
+def _csv_summary(
+    imported: CsvImport, added: list[StudentModel], rejected: list[tuple[str, str]]
+) -> str:
+    """Compte rendu de l'import CSV, refus et lignes sans identité compris."""
+    mark = _plural(len(added))
+    lines = [f"{len(added)} élève{mark} importé{mark} depuis le fichier."]
+    if rejected:
+        lines.append(_rejected_line(rejected))
+    if imported.skipped_rows:
+        skipped_mark = _plural(imported.skipped_rows)
+        lines.append(
+            f"\n{imported.skipped_rows} ligne{skipped_mark} sans nom "
+            f"ignorée{skipped_mark}."
+        )
     return "\n".join(lines)
 
 
