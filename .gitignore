@@ -15,3 +15,6 @@ build/*.onefile-build/
 # Integration tests artifacts
 integration_tests/algo_against_oracle/oracle_cache/
 integration_tests/algo_against_oracle/oracle_results/
+
+# Nuitka
+nuitka-crash-report.xml

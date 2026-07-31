@@ -28,3 +28,8 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "auto_classes.ui" = ["assets/*.png"]
+
+[tool.pytest.ini_options]
+# `pytest` sans argument lance la totalité : tests unitaires et tests d'intégration
+# (l'oracle par force brute tient en une trentaine de secondes à froid).
+testpaths = ["tests", "integration_tests"]

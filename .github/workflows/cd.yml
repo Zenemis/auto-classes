@@ -1,0 +1,104 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Le CD, c'est le CI plus le binaire : on réutilise le workflow de tests au lieu
+  # d'en dupliquer une variante qui finirait par diverger.
+  tests:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Exécutable Windows
+    needs: tests
+    runs-on: windows-latest
+    # Nuitka compile en C : un build à froid prend une dizaine de minutes.
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # La version de développement du projet : le binaire publié est compilé avec
+          # l'interpréteur sur lequel il est réellement utilisé.
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Vérifier que le tag correspond à la version du paquet
+        # Avant la compilation : inutile d'attendre dix minutes pour découvrir qu'un
+        # tag v0.2.0 publierait un binaire estampillé 0.1.0.
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          version="$(python build/build.py --print-version)"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Le tag v$tag ne correspond pas à __version__ = $version"
+            exit 1
+          fi
+
+      - name: Installer le projet et ses dépendances de développement
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Restaurer le cache de compilation Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Nuitka\Nuitka\Cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-
+            nuitka-${{ runner.os }}-
+
+      - name: Construire l'exécutable et son empreinte
+        run: python build/build.py
+
+      - name: Publier le binaire comme artefact de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-classes-windows
+          path: |
+            dist/*.exe
+            dist/*.exe.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Release GitHub
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Récupérer les binaires construits
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Vérifier les empreintes avant publication
+        # Le trajet par l'artefact de build n'est pas censé altérer un octet ; on s'en
+        # assure plutôt que de publier des empreintes qu'on n'a jamais confrontées.
+        working-directory: artifacts
+        run: sha256sum --check *.exe.sha256
+
+      - name: Créer la release et y joindre les binaires
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF#refs/tags/}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "${GITHUB_REF#refs/tags/}" \
+            --generate-notes \
+            artifacts/*.exe artifacts/*.exe.sha256
